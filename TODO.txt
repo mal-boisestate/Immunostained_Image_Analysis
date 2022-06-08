@@ -1,0 +1,11 @@
+1. Add mode recognition (theshold and unet)
+2. For defferent resolution create different tresholds for nucleus area
+3. Read resolution at the begginning and based on resolution use specifid settings.
+    Maybe create object of resolution settings.
+3. Create different flow of analysis for imagies with different resolution
+4. In ImageData (img_8bit = (channel.img / 256).astype('uint8')) create different way to convers image
+  to 8 bit. Since depth can be different.
+5. Do we need normalization for 8bit visualisation? For example, mChary if dim,
+if not normalised it is not possible to see any signal.
+6. Make edges smooth by applying increase and decrease of conters
+7. Save only dapi channel
