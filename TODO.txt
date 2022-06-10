@@ -1,11 +1,3 @@
-1. Add mode recognition (theshold and unet)
-2. For defferent resolution create different tresholds for nucleus area
-3. Read resolution at the begginning and based on resolution use specifid settings.
-    Maybe create object of resolution settings.
-3. Create different flow of analysis for imagies with different resolution
-4. In ImageData (img_8bit = (channel.img / 256).astype('uint8')) create different way to convers image
-  to 8 bit. Since depth can be different.
-5. Do we need normalization for 8bit visualisation? For example, mChary if dim,
-if not normalised it is not possible to see any signal.
-6. Make edges smooth by applying increase and decrease of conters
-7. Save only dapi channel
+1. Create README file
+2. Implement Analyzer.find_mask_based_on_thr (self, reader) function
+3. Read lense information (10x, 20x, 40x, 63x) at the beginning and use specific min_nuc_area if it is not provided by the user. We need to create a table with a limit for MSC smallest sized for each magnification.

@@ -14,9 +14,7 @@ class ImageData(object):
         self.cells_data, self.cells_num = self._analyse_signal_in_nuc_area(nuc_area_min_pixels_num)
 
     def _analyse_signal_in_nuc_area(self, nuc_area_min_pixels_num):
-
         nuclei_area_data = []
-
         for cnt in self.cnts:
             mask = Contour.draw_cnt(cnt, self.nuc_mask.shape)
             center = Contour.get_cnt_center(cnt)

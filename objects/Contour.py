@@ -36,6 +36,7 @@ def get_img_cnts(img, theshold):
 
     return cnts
 
+
 def draw_cnt(cntr, shape):
     mask = np.zeros(shape, dtype=np.uint8)
     cv2.drawContours(mask, [cntr], -1, color=1, thickness=-1)
@@ -57,11 +58,3 @@ def get_cnt_center(cont):
         center = (center_x, center_y)
 
     return center
-
-
-class CntExtremes(object):
-    def __init__(self, left, right, top, bottom):
-        self.left = left
-        self.right = right
-        self.top = top
-        self.bottom = bottom

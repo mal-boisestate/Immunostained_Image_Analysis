@@ -1,10 +1,9 @@
 import os
-import cv2.cv2 as cv2
 from pathlib import Path
 import bioformats
-
+import cv2.cv2 as cv2
+import numpy as np
 from objects.Structures import ImgResolution, PairImgChannel
-from objects import Utils
 
 
 class BioformatReader(object):
@@ -12,7 +11,7 @@ class BioformatReader(object):
     Creates an object that reads confocal microscopy images of two channels (actin and nucleus)
     """
 
-    def __init__(self, path, img_number):
+    def __init__(self, path, img_number, mask_channel_name):
         """
             Parameters:
             img_path (string): path to the file to read
@@ -24,7 +23,7 @@ class BioformatReader(object):
         self.metadata_obj = bioformats.OMEXML(metadata)
         self.channel_nums = self.metadata_obj.image(self.series).Pixels.get_channel_count()
         self.channels = self.find_channels()
-        self.nuc_channel = self.find_channel("DAPI")
+        self.nuc_channel = self.find_channel(mask_channel_name)
         self.img_resolution = self.get_resolution()
         self.depth = self.metadata_obj.image(self.series).Pixels.PixelType
 
@@ -82,17 +81,13 @@ class BioformatReader(object):
 
         return img_path, series
 
-    def read_all_layers(self, output_folder):
-        base_img_name = os.path.splitext(os.path.basename(self.image_path))[0]
+    def read_all_layers(self):
         pairs_img_channel = []
         for channel in self.channels:
             img = bioformats.load_image(str(self.image_path), c=channel, z=0, t=0, series=self.series, index=None,
                                         rescale=False,
                                         wants_max_intensity=False,
                                         channel_names=None)
-            img_path = os.path.join(output_folder,
-                                    base_img_name + '_' + self.channels[channel] + '.png')
-            cv2.imwrite(img_path, img)
             pairs_img_channel.append(PairImgChannel(self.channels[channel], img))
         return pairs_img_channel
 
@@ -103,11 +98,27 @@ class BioformatReader(object):
                                     wants_max_intensity=False,
                                     channel_names=None)
         if norm:
-            threshold = Utils.find_optimal_theshold(img, percentile=0.01)
-            img = Utils.normalization(img, threshold)
+            threshold = self.find_optimal_theshold(img, percentile=0.01)
+            img = self.normalization(img, threshold)
 
         return img, base_img_name + '_' + self.channels[self.nuc_channel] + '.png'
 
+    def find_optimal_theshold(self, img, percentile):
+        """
+        Find what is the minimal intensity of x% pixels that are not null
+        :param img:
+        :return:
+        """
+
+        not_zero_pixels = [pixel for pixel in img.flatten() if pixel > 0]
+        index = int(percentile / 100 * len(not_zero_pixels))
+        opt_threshold = np.sort(not_zero_pixels)[-index]
+        return opt_threshold
+
+    def normalization(self, img, norm_th):
+        img[np.where(img > norm_th)] = norm_th
+        img = cv2.normalize(img, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8UC1)
+        return img
 
     def close(self):
         bioformats.clear_image_reader_cache()
