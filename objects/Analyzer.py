@@ -1,11 +1,12 @@
 import os
+from PIL import Image, ImageFilter
 from objects.BioformatReader import BioformatReader
 from objects.ImageData import ImageData
 import sys
 import csv
 import glob
 import math
-import cv2.cv2 as cv2
+import cv2 as cv2
 import numpy as np
 from unet.predict import run_predict_unet
 
@@ -148,19 +149,25 @@ class Analyzer(object):
 
     def run_analysis(self):
         for folder in analysis_data_folders:
-            prepare_folder(analysis_data_folders[folder])
+            prepare_folder(analysis_data_folders[folder])  # prepares analysis data folder
 
         imgs_data = []
         for i, filename in enumerate(os.listdir(self.imgs_path)):
             for folder in temp_folders:
                 prepare_folder(temp_folders[folder])
-            reader = BioformatReader(self.imgs_path, i, self.mask_channel_name)
+            reader = BioformatReader(self.imgs_path, i, self.mask_channel_name) # "reader" is a BioformatReader object,
+                                                                                # containing all the information of the
+                                                                                # image type
+
+            # The above for loop (for i) runs through all of this code for each individual image in the folder
+            # Thus, the information in reader is specific to each individual image
 
             if self.nuc_recognition_mode == 'unet':
                 nuc_mask = self.find_mask_based_on_unet(reader)
 
             elif self.nuc_recognition_mode == 'thr':
-                nuc_mask = self.find_mask_based_on_thr(reader)
+                # find_mask_based_on_thr doesn't have functionality yet
+                nuc_mask = self.find_mask_based_on_thr(reader, i)
             else:
                 print("The recognition mode is not specified or specified incorrectly. Please use \"unet\" or \"thr\"")
                 sys.exit()
@@ -174,9 +181,23 @@ class Analyzer(object):
         save_stat(imgs_data)
 
     # TODO: implement this function. The algorithm shuld be simular to finding mask in MatLab program. Apply filtering(noise redution) and theshold provided by user.
-    def find_mask_based_on_thr(self, reader):
+    def find_mask_based_on_thr(self, reader, img_number):
         # use self.nuc_threshold
-        # Look at self._remove_small_particles function it can be helpful
+        # Look at self._remove_small_particles function it can be helpful - might not need though?
+        # Logic will be noise reduction (Gaussian filter) -> thresholding (0-100 scale) -> returning nuc_mask
+
+        # img_path is a string, img_number comes from run_analysis loop
+        img_path, img_series = reader.image_path, reader.image_series  # What's the deal with image "series"?
+
+        img = Image.open(img_path)
+
+        # Should produce Gaussian blurred version of image
+        img = img.filter(ImageFilter.GaussianBlur)
+
+        # image_depth = reader.depth()
+
+        # gauss_nuc_img = nuc_img.filter(ImageFilter.GaussianBlur)
+
         nuc_mask = 1
         return nuc_mask
 

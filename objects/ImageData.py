@@ -1,5 +1,5 @@
 import numpy as np
-import cv2.cv2 as cv2
+import cv2 as cv2
 import os
 from objects import Contour
 from objects.Structures import NucAreaData, Signal
