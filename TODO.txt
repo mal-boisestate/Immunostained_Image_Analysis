@@ -1,3 +1,9 @@
-1. Create README file
-2. Implement Analyzer.find_mask_based_on_thr (self, reader) function
+BEN | 1. Create README file
+BEN | 2. Implement Analyzer.find_mask_based_on_thr (self, reader) function
 3. Read lense information (10x, 20x, 40x, 63x) at the beginning and use specific min_nuc_area if it is not provided by the user. We need to create a table with a limit for MSC smallest sized for each magnification.
+
+# Test
+
+## Test
+
+### Test
