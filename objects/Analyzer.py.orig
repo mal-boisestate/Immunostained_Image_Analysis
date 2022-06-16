@@ -183,6 +183,9 @@ class Analyzer(object):
     # TODO: implement this function. The algorithm shuld be simular to finding mask in MatLab program. Apply filtering(noise redution) and theshold provided by user.
     def find_mask_based_on_thr(self, reader, img_number):
         # use self.nuc_threshold
+<<<<<<< HEAD
+        # reader.depth -> 'uint8' -> 0..255 or 'uint16' ->
+=======
         # Look at self._remove_small_particles function it can be helpful - might not need though?
         # Logic will be noise reduction (Gaussian filter) -> thresholding (0-100 scale) -> returning nuc_mask
 
@@ -198,6 +201,7 @@ class Analyzer(object):
 
         # gauss_nuc_img = nuc_img.filter(ImageFilter.GaussianBlur)
 
+>>>>>>> 726fa20382d0b42d0c19ee7b725ece1595a930cc
         nuc_mask = 1
         return nuc_mask
 

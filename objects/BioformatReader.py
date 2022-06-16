@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 import bioformats
-import cv2.cv2 as cv2
+import cv2 as cv2
 import numpy as np
 from objects.Structures import ImgResolution, PairImgChannel
 
@@ -19,13 +19,14 @@ class BioformatReader(object):
             actin_channel(int): channel of actin images at the provided microscopic image
         """
         self.image_path, self.series = self.get_img_path_and_series(path, img_number)
-        metadata = bioformats.get_omexml_metadata(str(self.image_path))
-        self.metadata_obj = bioformats.OMEXML(metadata)
+        metadata = bioformats.get_omexml_metadata(str(self.image_path)) # Obtaining image metadata
+        self.metadata_obj = bioformats.OMEXML(metadata) # Creation of a metadata "object"?
         self.channel_nums = self.metadata_obj.image(self.series).Pixels.get_channel_count()
         self.channels = self.find_channels()
-        self.nuc_channel = self.find_channel(mask_channel_name)
+        self.nuc_channel = self.find_channel(mask_channel_name) # Intended to use nuclear channel specifically?
         self.img_resolution = self.get_resolution()
-        self.depth = self.metadata_obj.image(self.series).Pixels.PixelType
+        self.depth = self.metadata_obj.image(self.series).Pixels.PixelType # Where depth (8 bit, etc.) is identified?
+                                                                           # What does this actually return?
 
     def find_channels(self):
         channels = {}
