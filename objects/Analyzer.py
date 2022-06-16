@@ -176,7 +176,7 @@ class Analyzer(object):
     # TODO: implement this function. The algorithm shuld be simular to finding mask in MatLab program. Apply filtering(noise redution) and theshold provided by user.
     def find_mask_based_on_thr(self, reader):
         # use self.nuc_threshold
-        # Look at self._remove_small_particles function it can be helpful
+        # reader.depth -> 'uint8' -> 0..255 or 'uint16' ->
         nuc_mask = 1
         return nuc_mask
 

@@ -6,7 +6,7 @@ import bioformats
 
 
 def main():
-    bioformat_imgs_path = r"D:\BioLab\img\Images for matlab quant\10x"  # path to the folder that contains bio format images (czi, lif, ect) or path to the specific image
+    bioformat_imgs_path = r"D:\BioLab\img\EB1 Tracking\EB1 LIV 22-06-02\Control"  # path to the folder that contains bio format images (czi, lif, ect) or path to the specific image
     nuc_recognition_mode = "unet"  # "unet" or "trh" TODO Implement threshold option. Now only unet mode work
     mask_channel_name = "DAPI"
 
