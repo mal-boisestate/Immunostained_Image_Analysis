@@ -1,12 +1,11 @@
 import os
-from PIL import Image, ImageFilter
 from objects.BioformatReader import BioformatReader
 from objects.ImageData import ImageData
 import sys
 import csv
 import glob
 import math
-import cv2 as cv2
+import cv2.cv2 as cv2
 import numpy as np
 from unet.predict import run_predict_unet
 
@@ -166,8 +165,8 @@ class Analyzer(object):
                 nuc_mask = self.find_mask_based_on_unet(reader)
 
             elif self.nuc_recognition_mode == 'thr':
-                # find_mask_based_on_thr doesn't have functionality yet
-                nuc_mask = self.find_mask_based_on_thr(reader, i)
+                nuc_mask = self.find_mask_based_on_thr(reader)
+
             else:
                 print("The recognition mode is not specified or specified incorrectly. Please use \"unet\" or \"thr\"")
                 sys.exit()
@@ -180,26 +179,44 @@ class Analyzer(object):
 
         save_stat(imgs_data)
 
-    # TODO: implement this function. The algorithm shuld be simular to finding mask in MatLab program. Apply filtering(noise redution) and theshold provided by user.
-    def find_mask_based_on_thr(self, reader, img_number):
-        # use self.nuc_threshold
+    def find_mask_based_on_thr(self, reader):
         # Look at self._remove_small_particles function it can be helpful - might not need though?
-        # Logic will be noise reduction (Gaussian filter) -> thresholding (0-100 scale) -> returning nuc_mask
+        # Logic flow: noise reduction (Gaussian filter) -> binary thresholding (0/255 scale) -> returning nuc_mask
+        # _remove_small_particles function - is it needed?
 
-        # img_path is a string, img_number comes from run_analysis loop
-        img_path, img_series = reader.image_path, reader.image_series  # What's the deal with image "series"?
+        # reads czi image from reader and normalizes to 8bit image - bypassing need for conditional thresholding
+        nuc_img_8bit_norm, nuc_file_name = reader.read_nucleus_layers(norm=True)
 
-        img = Image.open(img_path)
+        # produces a Gaussian blurred version of image; kernel is customizable (how to confirm?)
+        gauss_nuc_8bit_norm = cv2.GaussianBlur(nuc_img_8bit_norm, (5, 5), 0)
 
-        # Should produce Gaussian blurred version of image
-        img = img.filter(ImageFilter.GaussianBlur)
+        # modifies each pixel in the blurred image, creating a binary image based on the user-provided threshold
+        # for x in range(0, len(gauss_nuc_8bit_norm)):
+        #    for y in range(0, len(gauss_nuc_8bit_norm)):
+        #        if gauss_nuc_8bit_norm[x][y] < self.nuc_threshold:
+        #            gauss_nuc_8bit_norm[x][y] = 0
+        #        else:
+        #            gauss_nuc_8bit_norm[x][y] = 255
 
-        # image_depth = reader.depth()
+        # built-in binary functionality of numpy returns true/false array, which doesn't seem to work:
+        # gauss_nuc_8bit_bin = gauss_nuc_8bit_norm < self.nuc_threshold
 
-        # gauss_nuc_img = nuc_img.filter(ImageFilter.GaussianBlur)
+        # ALTERNATIVELY, could use built-in thresholding function - requires conversion to greyscale image:
 
-        nuc_mask = 1
+        # gauss_nuc_8bit_grey = cv2.cvtColor(gauss_nuc_8bit_norm, cv2.COLOR_BGR2GRAY)
+        _, gauss_nuc_8bit_binary = cv2.threshold(gauss_nuc_8bit_norm, self.nuc_threshold, 255, cv2.THRESH_BINARY)
+
+        # the following lines are for debugging, and MAY BE TURNED OFF to prevent them from popping up
+        # cv2.imshow("original img", cv2.resize(nuc_img_8bit_norm, (750, 750)))
+        # cv2.imshow("gaussian blurred img", cv2.resize(gauss_nuc_8bit_norm, (750, 750)))  # keep it for debugging
+        # cv2.imshow("gaussian binary img", cv2.resize(gauss_nuc_8bit_binary, (750, 750)))  # keep it for debugging
+        # cv2.waitKey()
+
+        nuc_mask = gauss_nuc_8bit_binary
+
         return nuc_mask
+
+        # ALTERNATIVELY, could use built-in thresholding function - requires conversion to greyscale image (nope!)
 
     def find_mask_based_on_unet(self, reader):
         """
