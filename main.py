@@ -25,6 +25,7 @@ def main():
     analyser = Analyzer(bioformat_imgs_path, nuc_recognition_mode, nuc_threshold, unet_parm, nuc_area_min_pixels_num,
                         mask_channel_name)
     analyser.run_analysis()
+    #analyser.run_analysis(analysis_type)
     end = time.time()
     print("Total time is: ")
     print(end - start)

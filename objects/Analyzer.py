@@ -147,6 +147,12 @@ class Analyzer(object):
         self.mask_channel_name = mask_channel_name
 
     def run_analysis(self):
+        # if analysis_type == "XXX":
+        # self.analyse_nuc_num_time_point()
+        # elif analysis_type == "YYY":
+        # self.analyse_signal_mask_area()
+
+
         for folder in analysis_data_folders:
             prepare_folder(analysis_data_folders[folder])  # prepares analysis data folder
 
@@ -160,6 +166,8 @@ class Analyzer(object):
 
             # The above for loop (for i) runs through all of this code for each individual image in the folder
             # Thus, the information in reader is specific to each individual image
+
+            # One of the option: for t_poin in range(reader.t_num):
 
             if self.nuc_recognition_mode == 'unet':
                 nuc_mask = self.find_mask_based_on_unet(reader)
