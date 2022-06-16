@@ -7,7 +7,7 @@ import bioformats
 
 def main():
     bioformat_imgs_path = r"C:\BioLab\img\63x testing ground"  # path to the folder that contains bio format images (czi, lif, ect) or path to the specific image
-    nuc_recognition_mode = "unet"  # "unet" or "thr" TODO Implement threshold option. Now only unet mode works
+    nuc_recognition_mode = "unet"  # "unet" or "thr"
     mask_channel_name = "DAPI"
 
     unet_model = r"unet\models\CP_epoch198.pth"  # path to the trained Unet model if the user chooses nuc_recognition_mode = unet if not can be None
@@ -16,7 +16,7 @@ def main():
     unet_model_scale = 1
     unet_img_size = (512, 512)
     unet_model_thrh = 0.5
-    nuc_area_min_pixels_num = 200 # Identify the difference between this and nuc_threshold?
+    nuc_area_min_pixels_num = 2000 # Identify the difference between this and nuc_threshold?
     unet_parm = UnetParam(unet_model, unet_model_scale, unet_model_thrh, unet_img_size)
     nuc_threshold = 30
     javabridge.start_vm(class_path=bioformats.JARS)
