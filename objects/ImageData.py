@@ -12,6 +12,7 @@ class ImageData(object):
         self.nuc_mask = nuc_mask
         self.cnts = Contour.get_mask_cnts(self.nuc_mask)
         self.cells_data, self.cells_num = self._analyse_signal_in_nuc_area(nuc_area_min_pixels_num)
+        #TODO: add variable that keeps time point
 
     def _analyse_signal_in_nuc_area(self, nuc_area_min_pixels_num):
         nuclei_area_data = []
