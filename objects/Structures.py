@@ -12,10 +12,11 @@ class ImgResolution(object):
         self.y = y
 
 
-class PairImgChannel(object):
-    def __init__(self, channel_name, img):
+class ImgChannelTime(object):
+    def __init__(self, channel_name, img, time):
         self.name = channel_name
         self.img = img
+        self.time_point = time
 
 
 class Signal(object):
