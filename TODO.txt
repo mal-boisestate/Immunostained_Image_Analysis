@@ -1,3 +1,6 @@
-1. Add to BioformatsReader #time_frames Hint: self.t_num = self.metadata_obj.image(self.series).Pixels.SizeT
+1. Create stat file and histogram for the image path to folder:"D:\BioLab\img\Overnight time-lapse"
+    DONE 1.1. Create if/else based on analysis_type that the user provides
+    1.2 Implement analyse_nuc_num_time_point()
+2. Add to BioformatsReader #time_frames Hint: self.t_num = self.metadata_obj.image(self.series).Pixels.SizeT
 3. Read lense information (10x, 20x, 40x, 63x) at the beginning and use specific min_nuc_area if it is not provided by the user. We need to create a table with a limit for MSC smallest sized for each magnification.
 

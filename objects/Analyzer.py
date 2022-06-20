@@ -7,6 +7,7 @@ import glob
 import math
 import cv2.cv2 as cv2
 import numpy as np
+import matplotlib.pyplot as plt
 from unet.predict import run_predict_unet
 
 temp_folders = {
@@ -120,6 +121,40 @@ def save_stat(imgs_data):
                                     [signal.intensity for signal in cell.signals])
     print("Stat created")
 
+def save_nuc_count_stat(imgs_data_t, save_graph):
+    file_name = os.path.splitext(imgs_data_t[0].path)[0]
+    header_row = ["Time point", "Time from experiment start, (min)", "Cell num"]
+    path = os.path.join(analysis_data_folders["analysis"], file_name +'_time_point_stat.csv')
+
+    nuc_count = []
+    time_points = []
+
+    with open(path, mode='w') as stat_file:
+        csv_writer = csv.writer(stat_file, delimiter=',')
+        csv_writer.writerow(header_row)
+
+        for img_data in imgs_data_t:
+            n = img_data.cells_num
+            nuc_count.append(n)
+            t = img_data.time_point
+            time_from_experiment_start = img_data.channels_raw_data[0].time_point
+            time_points.append(time_from_experiment_start)
+            csv_writer.writerow([str(t), str(time_from_experiment_start//60), str(n)])
+
+    if save_graph:
+        # plotting the points
+        plt.plot(time_points, nuc_count)
+        # naming the x axis
+        plt.xlabel('time from the beginning of the experiment, min')
+        # naming the y axis
+        plt.ylabel('cells #')
+        # giving a title to my graph
+        plt.title('Cell count over time')
+        # function to save the plot
+        figure_path = os.path.join(analysis_data_folders["analysis"], file_name + '_time_point_stat.png')
+        plt.savefig(figure_path)
+    print(f"Stat for {file_name} is created")
+
 
 def stitch_mask(input_folder, unet_img_size, num):
     img_col = []
@@ -137,22 +172,60 @@ def stitch_mask(input_folder, unet_img_size, num):
 
 
 class Analyzer(object):
-    def __init__(self, bioformat_imgs_path, nuc_recognition_mode, nuc_threshold=None, unet_parm=None,
+    def __init__(self, bioformat_imgs_path, nuc_recognition_mode, analysis_type, nuc_threshold=None, unet_parm=None,
                  nuc_area_min_pixels_num=0, mask_channel_name="DAPI"):
         self.imgs_path = bioformat_imgs_path
         self.nuc_recognition_mode = nuc_recognition_mode
+        self.analysis_type = analysis_type
         self.nuc_threshold = nuc_threshold
         self.unet_parm = unet_parm
         self.nuc_area_min_pixels_num = nuc_area_min_pixels_num
         self.mask_channel_name = mask_channel_name
 
+
     def run_analysis(self):
-        # if analysis_type == "XXX":
-        # self.analyse_nuc_num_time_point()
-        # elif analysis_type == "YYY":
-        # self.analyse_signal_mask_area()
+        if self.analysis_type == "nuc_area_signal":
+            self.analyse_signal_mask_area()
+        elif self.analysis_type == "nuc_count":
+            self.analyse_nuc_num_time_point()
+        else:
+            sys.exit("Please provide analysis type: \"nuc_area_signal\" or \"nuc_count\" ")
 
 
+    def analyse_nuc_num_time_point(self):
+        for folder in analysis_data_folders:
+            prepare_folder(analysis_data_folders[folder])  # prepares analysis data folder
+
+        imgs_data = []
+        for i, filename in enumerate(os.listdir(self.imgs_path)):
+            for folder in temp_folders:
+                prepare_folder(temp_folders[folder])
+            reader = BioformatReader(self.imgs_path, i, self.mask_channel_name)  # "reader" is a BioformatReader object,
+            imgs_data_t = []
+
+            for t in range(reader.t_num):
+                if self.nuc_recognition_mode == 'unet':
+                    nuc_mask = self.find_mask_based_on_unet(reader, t)
+
+                elif self.nuc_recognition_mode == 'thr':
+                    nuc_mask = self.find_mask_based_on_thr(reader, t)
+
+                else:
+                    print(
+                        "The recognition mode is not specified or specified incorrectly. Please use \"unet\" or \"thr\"")
+                    sys.exit()
+
+                channels_raw_data = reader.read_all_layers(t)
+                img_data = ImageData(filename, channels_raw_data, nuc_mask, self.nuc_area_min_pixels_num, t)
+                img_data.draw_and_save_cnts_for_channels(analysis_data_folders["cnts_verification"],
+                                                         self.nuc_area_min_pixels_num, self.mask_channel_name, t)
+                imgs_data_t.append(img_data)
+            save_nuc_count_stat(imgs_data_t, save_graph=True)
+            imgs_data.append(imgs_data_t)
+
+
+
+    def analyse_signal_mask_area(self):
         for folder in analysis_data_folders:
             prepare_folder(analysis_data_folders[folder])  # prepares analysis data folder
 
@@ -182,18 +255,18 @@ class Analyzer(object):
             channels_raw_data = reader.read_all_layers()
             img_data = ImageData(filename, channels_raw_data, nuc_mask, self.nuc_area_min_pixels_num)
             img_data.draw_and_save_cnts_for_channels(analysis_data_folders["cnts_verification"],
-                                                     self.nuc_area_min_pixels_num)
+                                                     self.nuc_area_min_pixels_num, self.mask_channel_name)
             imgs_data.append(img_data)
 
         save_stat(imgs_data)
 
-    def find_mask_based_on_thr(self, reader):
+    def find_mask_based_on_thr(self, reader, t=0):
         # Look at self._remove_small_particles function it can be helpful - might not need though?
         # Logic flow: noise reduction (Gaussian filter) -> binary thresholding (0/255 scale) -> returning nuc_mask
         # _remove_small_particles function - is it needed?
 
         # reads czi image from reader and normalizes to 8bit image - bypassing need for conditional thresholding
-        nuc_img_8bit_norm, nuc_file_name = reader.read_nucleus_layers(norm=True)
+        nuc_img_8bit_norm, nuc_file_name = reader.read_nucleus_layers(t=t)
 
         # produces a Gaussian blurred version of image; kernel is customizable (how to confirm?)
         gauss_nuc_8bit_norm = cv2.GaussianBlur(nuc_img_8bit_norm, (5, 5), 0)
@@ -226,13 +299,13 @@ class Analyzer(object):
 
         # ALTERNATIVELY, could use built-in thresholding function - requires conversion to greyscale image (nope!)
 
-    def find_mask_based_on_unet(self, reader):
+    def find_mask_based_on_unet(self, reader, t=0):
         """
         Finds mask picture based on unet model. Since my GPU can handle only 512*512 images for prediction
         :param reader:
         :return:
         """
-        nuc_img_8bit_norm, nuc_file_name = reader.read_nucleus_layers(norm=True)
+        nuc_img_8bit_norm, nuc_file_name = reader.read_nucleus_layers(t=t)
         pieces_num = cut_image(nuc_img_8bit_norm, nuc_file_name, self.unet_parm.unet_img_size,
                                temp_folders["cut_8bit_img"])
 

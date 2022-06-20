@@ -3,7 +3,7 @@ from pathlib import Path
 import bioformats
 import cv2 as cv2
 import numpy as np
-from objects.Structures import ImgResolution, PairImgChannel
+from objects.Structures import ImgResolution, ImgChannelTime
 
 
 class BioformatReader(object):
@@ -27,6 +27,7 @@ class BioformatReader(object):
         self.img_resolution = self.get_resolution()
         self.depth = self.metadata_obj.image(self.series).Pixels.PixelType # Where depth (8 bit, etc.) is identified?
                                                                            # What does this actually return?
+        self.t_num = self.metadata_obj.image(self.series).Pixels.SizeT
 
     def find_channels(self):
         channels = {}
@@ -82,19 +83,22 @@ class BioformatReader(object):
 
         return img_path, series
 
-    def read_all_layers(self):
-        pairs_img_channel = []
-        for channel in self.channels:
-            img = bioformats.load_image(str(self.image_path), c=channel, z=0, t=0, series=self.series, index=None,
+    def read_all_layers(self, t=0):
+        img_channel_time = []
+        for i, channel in enumerate(self.channels):
+            img = bioformats.load_image(str(self.image_path), c=channel, z=0, t=t, series=self.series, index=None,
                                         rescale=False,
                                         wants_max_intensity=False,
                                         channel_names=None)
-            pairs_img_channel.append(PairImgChannel(self.channels[channel], img))
-        return pairs_img_channel
+            plane_num = len(self.channels) * t + i
+            time_from_experiment_start = self.metadata_obj.image(self.series).Pixels.Plane(plane_num).DeltaT
+            img_channel_time.append(ImgChannelTime(self.channels[channel], img, time_from_experiment_start))
 
-    def read_nucleus_layers(self, norm=True):
+        return img_channel_time
+
+    def read_nucleus_layers(self, norm=True, t=0):
         base_img_name = os.path.splitext(os.path.basename(self.image_path))[0]
-        img = bioformats.load_image(str(self.image_path), c=self.nuc_channel, z=0, t=0, series=self.series, index=None,
+        img = bioformats.load_image(str(self.image_path), c=self.nuc_channel, z=0, t=t, series=self.series, index=None,
                                     rescale=False,
                                     wants_max_intensity=False,
                                     channel_names=None)
