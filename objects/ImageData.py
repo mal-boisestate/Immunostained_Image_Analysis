@@ -10,7 +10,7 @@ class ImageData(object):
         self.path = path
         self.channels_raw_data = channels_raw_data
         self.nuc_mask = nuc_mask
-        self.cnts = Contour.get_mask_cnts(self.nuc_mask)
+        self.cnts = Contour.get_mask_cnts(self.nuc_mask) # contours drawn from provided nuc_mask (a binary 1/255 arr)
         self.cells_data, self.cells_num = self._analyse_signal_in_nuc_area(nuc_area_min_pixels_num)
         self.time_point = time_point
 

@@ -7,8 +7,8 @@ import bioformats
 
 def main():
     # bioformat_imgs_path = r"D:\BioLab\img\Overnight time-lapse"  # path to the folder that contains bio format images (czi, lif, ect) or path to the specific image
-    bioformat_imgs_path = r"C:\BioLab\img\Overnight DAPI"
-    nuc_recognition_mode = "thr"  # "unet" or "thr"
+    bioformat_imgs_path = r"C:\BioLab\img\63x testing ground"
+    nuc_recognition_mode = "unet"  # "unet" or "thr"
     mask_channel_name = "DAPI"
     analysis_type = "nuc_count" #"nuc_count" or "nuc_area_signal"
 
@@ -19,9 +19,9 @@ def main():
     unet_model_scale = 1
     unet_img_size = (512, 512)
     unet_model_thrh = 0.5
-    nuc_area_min_pixels_num = 500 # Identify the difference between this and nuc_threshold?
+    nuc_area_min_pixels_num = 2000 # Identify the difference between this and nuc_threshold?
     unet_parm = UnetParam(unet_model, unet_model_scale, unet_model_thrh, unet_img_size)
-    nuc_threshold = 50 #None be default
+    nuc_threshold = 50 # None by default
     javabridge.start_vm(class_path=bioformats.JARS)
 
     start = time.time()
