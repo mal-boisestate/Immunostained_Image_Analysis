@@ -42,7 +42,7 @@ ax[0].imshow(image, cmap=plt.cm.gray)
 ax[0].set_title('Overlapping objects')
 ax[1].imshow(cv2.drawContours(np.zeros_like(label_mask), full_cnts, -1, 255, 3), cmap=plt.cm.gray)
 ax[1].set_title('Distances')
-ax[2].imshow(labels, cmap=plt.cm.nipy_spectral)
+ax[2].imshow(labels, cmap=plt.cm.gray)
 ax[2].set_title('Separated objects')
 
 for a in ax:

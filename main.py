@@ -19,9 +19,9 @@ def main():
     unet_model_scale = 1
     unet_img_size = (512, 512)
     unet_model_thrh = 0.5
-    nuc_area_min_pixels_num = 500 # Identify the difference between this and nuc_threshold?
+    nuc_area_min_pixels_num = 2000 # Identify the difference between this and nuc_threshold?
     unet_parm = UnetParam(unet_model, unet_model_scale, unet_model_thrh, unet_img_size)
-    nuc_threshold = 50 #None be default
+    nuc_threshold = 50 # None by default
     javabridge.start_vm(class_path=bioformats.JARS)
 
     start = time.time()

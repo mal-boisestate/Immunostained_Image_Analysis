@@ -294,6 +294,7 @@ class Analyzer(object):
         # cv2.waitKey()
 
         nuc_mask = gauss_nuc_8bit_binary
+        cv2.waitKey()
 
         return nuc_mask
 
@@ -314,6 +315,9 @@ class Analyzer(object):
                          self.unet_parm.unet_model_scale,
                          self.unet_parm.unet_model_thrh)
         nuc_mask = stitch_mask(temp_folders["cut_mask"], self.unet_parm.unet_img_size, pieces_num)
+
+        cv2.imshow("original nuc mask - unet", cv2.resize(nuc_mask, (750, 750)))
+
         return nuc_mask
 
     def _remove_small_particles(self, mask):
