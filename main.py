@@ -6,11 +6,11 @@ import bioformats
 
 
 def main():
-    # bioformat_imgs_path = r"D:\BioLab\img\Overnight time-lapse"  # path to the folder that contains bio format images (czi, lif, ect) or path to the specific image
-    bioformat_imgs_path = r"D:\BioLab\img\Images for matlab quant\63x_3img_test"
-    nuc_recognition_mode = "thr"  # "unet" or "thr"
+    bioformat_imgs_path = r"D:\BioLab\img\Overnight time-lapse"  # path to the folder that contains bio format images (czi, lif, ect) or path to the specific image
+    # bioformat_imgs_path = r"D:\BioLab\img\Images for matlab quant\63x_3img_test"
+    nuc_recognition_mode = "unet"  # "unet" or "thr"
     mask_channel_name = "DAPI"
-    analysis_type = "nuc_area_signal" #"nuc_count" or "nuc_area_signal"
+    analysis_type = "nuc_count" #"nuc_count" or "nuc_area_signal"
 
 
     unet_model = r"unet\models\CP_epoch198.pth"  # path to the trained Unet model if the user chooses nuc_recognition_mode = unet if not can be None

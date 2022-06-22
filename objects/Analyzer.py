@@ -138,7 +138,7 @@ def save_nuc_count_stat(imgs_data_t, save_graph):
             nuc_count.append(n)
             t = img_data.time_point
             time_from_experiment_start = img_data.channels_raw_data[0].time_point
-            time_points.append(time_from_experiment_start)
+            time_points.append(time_from_experiment_start//60)
             csv_writer.writerow([str(t), str(time_from_experiment_start//60), str(n)])
 
     if save_graph:
