@@ -173,7 +173,7 @@ def stitch_mask(input_folder, unet_img_size, num):
 
 class Analyzer(object):
     def __init__(self, bioformat_imgs_path, nuc_recognition_mode, analysis_type, nuc_threshold=None, unet_parm=None,
-                 nuc_area_min_pixels_num=0, mask_channel_name="DAPI"):
+                 nuc_area_min_pixels_num=0, mask_channel_name="DAPI", isWatershed=True):
         self.imgs_path = bioformat_imgs_path
         self.nuc_recognition_mode = nuc_recognition_mode
         self.analysis_type = analysis_type
@@ -181,6 +181,7 @@ class Analyzer(object):
         self.unet_parm = unet_parm
         self.nuc_area_min_pixels_num = nuc_area_min_pixels_num
         self.mask_channel_name = mask_channel_name
+        self.isWatershed = isWatershed
 
 
     def run_analysis(self):
@@ -216,7 +217,7 @@ class Analyzer(object):
                     sys.exit()
 
                 channels_raw_data = reader.read_all_layers(t)
-                img_data = ImageData(filename, channels_raw_data, nuc_mask, self.nuc_area_min_pixels_num, t)
+                img_data = ImageData(filename, channels_raw_data, nuc_mask, self.nuc_area_min_pixels_num, t, self.isWatershed)
                 img_data.draw_and_save_cnts_for_channels(analysis_data_folders["cnts_verification"],
                                                          self.nuc_area_min_pixels_num, self.mask_channel_name, t)
                 imgs_data_t.append(img_data)
@@ -315,8 +316,7 @@ class Analyzer(object):
                          self.unet_parm.unet_model_scale,
                          self.unet_parm.unet_model_thrh)
         nuc_mask = stitch_mask(temp_folders["cut_mask"], self.unet_parm.unet_img_size, pieces_num)
-
-        cv2.imshow("original nuc mask - unet", cv2.resize(nuc_mask, (750, 750)))
+        # cv2.imshow("original nuc mask - unet", cv2.resize(nuc_mask, (750, 750)))
 
         return nuc_mask
 
