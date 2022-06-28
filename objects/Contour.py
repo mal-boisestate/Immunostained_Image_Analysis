@@ -10,41 +10,41 @@ from skimage.feature import peak_local_max
 
 def get_mask_cnts(mask):
 
-    kernel = np.ones((50, 50), np.uint8)
-
-    # morphology - opening
-    # mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
-
-    # morphology - dilation
-    mask = cv2.dilate(mask, kernel, iterations = 1)
-
-    cv2.imshow("post-morphology mask", cv2.resize(mask, (750, 750)))
-    cv2.waitKey()
-
-    # Now we want to separate the two objects in image
-    # Generate the markers as local maxima of the distance to the background
-    distance = ndi.distance_transform_edt(mask)
-    coords = peak_local_max(distance, footprint=np.ones((3, 3)), labels=mask)
-    temp_mask = np.zeros(distance.shape, dtype=bool)
-    temp_mask[tuple(coords.T)] = True
-    markers, _ = ndi.label(temp_mask)
-    labels = watershed(-distance, markers, mask=mask)
-
-    fig, axes = plt.subplots(ncols=3, figsize=(9, 3), sharex=True, sharey=True)
-    ax = axes.ravel()
-
-    ax[0].imshow(mask, cmap=plt.cm.gray)
-    ax[0].set_title('Overlapping objects')
-    ax[1].imshow(-distance, cmap=plt.cm.gray)
-    ax[1].set_title('Distances')
-    ax[2].imshow(labels, cmap=plt.cm.nipy_spectral)
-    ax[2].set_title('Separated objects')
-
-    for a in ax:
-        a.set_axis_off()
-
-    fig.tight_layout()
-    plt.show()
+    # kernel = np.ones((50, 50), np.uint8)
+    #
+    # # morphology - opening
+    # # mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+    #
+    # # morphology - dilation
+    # mask = cv2.dilate(mask, kernel, iterations = 1)
+    #
+    # cv2.imshow("post-morphology mask", cv2.resize(mask, (750, 750)))
+    # cv2.waitKey()
+    #
+    # # Now we want to separate the two objects in image
+    # # Generate the markers as local maxima of the distance to the background
+    # distance = ndi.distance_transform_edt(mask)
+    # coords = peak_local_max(distance, footprint=np.ones((3, 3)), labels=mask)
+    # temp_mask = np.zeros(distance.shape, dtype=bool)
+    # temp_mask[tuple(coords.T)] = True
+    # markers, _ = ndi.label(temp_mask)
+    # labels = watershed(-distance, markers, mask=mask)
+    #
+    # fig, axes = plt.subplots(ncols=3, figsize=(9, 3), sharex=True, sharey=True)
+    # ax = axes.ravel()
+    #
+    # ax[0].imshow(mask, cmap=plt.cm.gray)
+    # ax[0].set_title('Overlapping objects')
+    # ax[1].imshow(-distance, cmap=plt.cm.gray)
+    # ax[1].set_title('Distances')
+    # ax[2].imshow(labels, cmap=plt.cm.nipy_spectral)
+    # ax[2].set_title('Separated objects')
+    #
+    # for a in ax:
+    #     a.set_axis_off()
+    #
+    # fig.tight_layout()
+    # plt.show()
 
     # # kernel creation
     # kernel = np.ones((3, 3), np.uint8)

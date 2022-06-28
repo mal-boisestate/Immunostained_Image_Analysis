@@ -26,18 +26,38 @@ class ImageData(object):
         else: # Applying watershed algorithm on the mask
             distance = ndi.distance_transform_edt(self.nuc_mask)
             min_distance = 2 * int((nuc_area_min_pixels_num / math.pi) ** 1/2) # diameter that based on formula of Area of a circle
+                                                                               # scales to the cell size threshold defined in the main()
             coords = peak_local_max(distance, min_distance=min_distance, labels=self.nuc_mask)
             mask = np.zeros(distance.shape, dtype=bool)
             mask[tuple(coords.T)] = True
             markers, _ = ndi.label(mask)
             labels = watershed(-distance, markers, mask=self.nuc_mask)
 
-            for label in np.unique(labels):
+            # loops through labels and removes any cells that touch the edges of the frame
+            for x in range(0, len(labels)):
+                for y in range(0, len(labels)):
+                    if x == len(labels) - 1 and labels[y][x] != 0 \
+                            or (x == 0 and labels[y][x] != 0) or (y == len(labels) - 1 and labels[y][x] != 0) \
+                            or (y == 0 and labels[y][x] != 0):
+                        temp_elim = labels[y][x]
+                        for a in range(0, len(labels)):
+                            for b in range(0, len(labels)):
+                                if labels[b][a] == temp_elim:
+                                    labels[b][a] = 0
+
+            #Find cntrs
+            for label in np.unique(labels): # np.unique() finds the unique element(s) of an array
+                                            # in this case, any non-0 values (labeled coordinates) will stand out as unique
+            # don't need iterable element in for loops?
                 if label == 0:
-                    continue
-                label_mask = np.zeros_like(labels, dtype=np.uint8)
+                    continue # "continue" statement loops back to the start of the loop, without executing rest of code
+                label_mask = np.zeros_like(labels, dtype=np.uint8) # unlike in the example, data type is set to int8
+                                                                   # so that no bool array is needed
                 label_mask[labels == label] = 255
                 full_cnts.extend(cv2.findContours(label_mask, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)[0])
+                # "extend" adds a specified element to the end of a given list
+                # Returns a list of contours
+
         return full_cnts
 
 

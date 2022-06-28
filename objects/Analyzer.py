@@ -153,6 +153,7 @@ def save_nuc_count_stat(imgs_data_t, save_graph):
         # function to save the plot
         figure_path = os.path.join(analysis_data_folders["analysis"], file_name + '_time_point_stat.png')
         plt.savefig(figure_path)
+
     print(f"Stat for {file_name} is created")
 
 

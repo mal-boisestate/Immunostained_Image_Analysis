@@ -14,7 +14,9 @@ from skimage.feature import peak_local_max
 # mask_circle1 = (x - x1)**2 + (y - y1)**2 < r1**2
 # mask_circle2 = (x - x2)**2 + (y - y2)**2 < r2**2
 # image = np.logical_or(mask_circle1, mask_circle2)
-image = cv2.imread("mask_nuc.png", cv2.IMREAD_GRAYSCALE).astype(np.bool)
+
+image = cv2.imread(r"C:\Users\redso\Downloads\mask_nuc.png", cv2.IMREAD_GRAYSCALE).astype(np.bool) # imports png (8bit arr) as grayscale boolean arr?
+                                                                         # other future applications?
 
 # Now we want to separate the two objects in image
 # Generate the markers as local maxima of the distance to the background
