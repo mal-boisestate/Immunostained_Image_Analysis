@@ -14,9 +14,7 @@ from skimage.feature import peak_local_max
 # mask_circle1 = (x - x1)**2 + (y - y1)**2 < r1**2
 # mask_circle2 = (x - x2)**2 + (y - y2)**2 < r2**2
 # image = np.logical_or(mask_circle1, mask_circle2)
-
-image = cv2.imread(r"C:\Users\redso\Downloads\mask_nuc.png", cv2.IMREAD_GRAYSCALE).astype(np.bool) # imports png (8bit arr) as grayscale boolean arr?
-                                                                         # other future applications?
+image = cv2.imread("mask_nuc.png", cv2.IMREAD_GRAYSCALE).astype(np.bool)
 
 # Now we want to separate the two objects in image
 # Generate the markers as local maxima of the distance to the background
@@ -44,7 +42,7 @@ ax[0].imshow(image, cmap=plt.cm.gray)
 ax[0].set_title('Overlapping objects')
 ax[1].imshow(cv2.drawContours(np.zeros_like(label_mask), full_cnts, -1, 255, 3), cmap=plt.cm.gray)
 ax[1].set_title('Distances')
-ax[2].imshow(labels, cmap=plt.cm.gray)
+ax[2].imshow(labels, cmap=plt.cm.nipy_spectral)
 ax[2].set_title('Separated objects')
 
 for a in ax:

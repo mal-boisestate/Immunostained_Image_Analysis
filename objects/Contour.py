@@ -18,8 +18,8 @@ def get_mask_cnts(mask):
     # # morphology - dilation
     # mask = cv2.dilate(mask, kernel, iterations = 1)
     #
-    # # cv2.imshow("post-morphology mask", cv2.resize(mask, (750, 750)))
-    # # cv2.waitKey()
+    # cv2.imshow("post-morphology mask", cv2.resize(mask, (750, 750)))
+    # cv2.waitKey()
     #
     # # Now we want to separate the two objects in image
     # # Generate the markers as local maxima of the distance to the background
