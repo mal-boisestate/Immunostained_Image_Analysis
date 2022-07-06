@@ -8,6 +8,9 @@ import math
 import cv2.cv2 as cv2
 import numpy as np
 import matplotlib.pyplot as plt
+import skimage
+import pandas as pd
+import trackpy as tp
 from unet.predict import run_predict_unet
 
 temp_folders = {
@@ -17,7 +20,8 @@ temp_folders = {
 
 analysis_data_folders = {
     "analysis": 'analysis_data/stat',
-    "cnts_verification": 'analysis_data/nuclei_area_verification'
+    "cnts_verification": 'analysis_data/nuclei_area_verification',
+    "movement_tracking": 'analysis_data/movement_tracking'
 }
 
 
@@ -156,6 +160,27 @@ def save_nuc_count_stat(imgs_data_t, save_graph):
 
     print(f"Stat for {file_name} is created")
 
+def save_nuc_movement_stat(features): # IN PROGRESS
+    file_name = "movement_stat.csv"
+    # header_row = ["Time point", "Time from experiment start, (min)", "Cell num"]
+    # path = os.path.join(analysis_data_folders["analysis"], file_name +'_movement_stat.csv')
+
+    features.to_excel(analysis_data_folders["analysis"], file_name)
+
+    # with open(path, mode='w') as stat_file:
+    #     csv_writer = csv.writer(stat_file, delimiter=',')
+    #     csv_writer.writerow(header_row)
+    #
+    #     for img_data in imgs_data_t:
+    #         n = img_data.cells_num
+    #         nuc_count.append(n)
+    #         t = img_data.time_point
+    #         time_from_experiment_start = img_data.channels_raw_data[0].time_point
+    #         time_points.append(time_from_experiment_start//60)
+    #         csv_writer.writerow([str(t), str(time_from_experiment_start//60), str(n)])
+
+    print(f"Movement stat for {file_name} is created")
+
 
 def stitch_mask(input_folder, unet_img_size, num):
     img_col = []
@@ -174,7 +199,7 @@ def stitch_mask(input_folder, unet_img_size, num):
 
 class Analyzer(object):
     def __init__(self, bioformat_imgs_path, nuc_recognition_mode, analysis_type, nuc_threshold=None, unet_parm=None,
-                 nuc_area_min_pixels_num=0, mask_channel_name="DAPI", isWatershed=True):
+                 nuc_area_min_pixels_num=0, mask_channel_name="DAPI", isWatershed=True, trackMovement=True):
         self.imgs_path = bioformat_imgs_path
         self.nuc_recognition_mode = nuc_recognition_mode
         self.analysis_type = analysis_type
@@ -183,6 +208,7 @@ class Analyzer(object):
         self.nuc_area_min_pixels_num = nuc_area_min_pixels_num
         self.mask_channel_name = mask_channel_name
         self.isWatershed = isWatershed
+        self.trackMovement = trackMovement
 
 
     def run_analysis(self):
@@ -199,6 +225,8 @@ class Analyzer(object):
             prepare_folder(analysis_data_folders[folder])  # prepares analysis data folder
 
         imgs_data = []
+        features = pd.DataFrame()  # Contains identified objects and their locations at each frame
+
         for i, filename in enumerate(os.listdir(self.imgs_path)):
             for folder in temp_folders:
                 prepare_folder(temp_folders[folder])
@@ -208,6 +236,8 @@ class Analyzer(object):
             for t in range(reader.t_num):
                 if self.nuc_recognition_mode == 'unet':
                     nuc_mask = self.find_mask_based_on_unet(reader, t)
+                    if self.trackMovement is True:
+                        features = self.find_object_locations(nuc_mask, features, analysis_data_folders["movement_tracking"], t)
 
                 elif self.nuc_recognition_mode == 'thr':
                     nuc_mask = self.find_mask_based_on_thr(reader, t)
@@ -222,7 +252,22 @@ class Analyzer(object):
                 img_data.draw_and_save_cnts_for_channels(analysis_data_folders["cnts_verification"],
                                                          self.nuc_area_min_pixels_num, self.mask_channel_name, t)
                 imgs_data_t.append(img_data)
+
+            # if self.nuc_recognition_mode == 'unet':
+            #     final_nuc_mask = self.find_mask_based_on_unet(reader, reader.t_num)
+            #     fig = plt.figure(figsize = (10, 5))
+            #
+            #     search_range = 100 # Adjustable
+            #     trajectory = tp.link_df(features, search_range, memory=5) # Memory is Adjustable
+            #     tp.plot_traj(trajectory, superimpose=final_nuc_mask)
+            #
+            #     img_path = os.path.join(analysis_data_folders["movement_tracking"],
+            #                              't = ' + str(reader.t_num) + '.png')
+            #     fig.savefig(img_path, bbox_inches='tight', dpi=150)
+
             save_nuc_count_stat(imgs_data_t, save_graph=True)
+            if self.trackMovement is True:
+                save_nuc_movement_stat(features)
             imgs_data.append(imgs_data_t)
 
 
@@ -333,3 +378,35 @@ class Analyzer(object):
                 continue
             cv2.fillPoly(clean_mask, pts=[cnt], color=(255, 255, 255))
         return clean_mask.astype('uint8')
+
+    def find_object_locations(self, nuc_mask, features, output_folder, t=0):
+
+        black = 0
+        label_image = skimage.measure.label(nuc_mask, background=black)
+
+        for region in skimage.measure.regionprops(label_image, intensity_image=nuc_mask):
+            # Everywhere, skip small areas
+            if region.area < 5:
+                continue
+            # Only white areas
+            if region.mean_intensity < 255:
+                continue
+
+            # Store features which survived the above criteria
+            features = features.append([{'y': region.centroid[0],
+                                         'x': region.centroid[1],
+                                         'frame': t,
+                                         }, ])
+
+        fig = plt.figure(figsize = (10, 5))
+
+        search_range = 100 # Adjustable
+        trajectory = tp.link_df(features, search_range, memory=5) # Memory is Adjustable
+        tp.plot_traj(trajectory, superimpose=nuc_mask) # Opens a window for the current tracking frame
+                                                       # Window must be closed to keep the program running
+
+        img_path = os.path.join(output_folder,
+                                't = ' + str(t) + '.png')
+        fig.savefig(img_path, bbox_inches='tight', dpi=150)
+
+        return features
