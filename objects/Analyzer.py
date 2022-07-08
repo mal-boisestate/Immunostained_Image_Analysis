@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import skimage
 import pandas as pd
 import trackpy as tp
+import xlsxwriter
 from unet.predict import run_predict_unet
 
 temp_folders = {
@@ -101,7 +102,7 @@ def save_stat(imgs_data):
     Extract and save statistical data
     :param imgs_data: an object that has image info
     """
-    # 1. Check that channal names for all imagies the same
+    # 1. Check that channel names for all images the same
     channels_names = [channel.name for channel in imgs_data[0].channels_raw_data]
     for img_data in imgs_data:
         for i, name in enumerate(channels_names):
@@ -124,6 +125,7 @@ def save_stat(imgs_data):
                 csv_writer.writerow([img_data.path, str(i), str(cell.center), str(cell.area)] +
                                     [signal.intensity for signal in cell.signals])
     print("Stat created")
+
 
 def save_nuc_count_stat(imgs_data_t, save_graph):
     file_name = os.path.splitext(imgs_data_t[0].path)[0]
@@ -160,27 +162,15 @@ def save_nuc_count_stat(imgs_data_t, save_graph):
 
     print(f"Stat for {file_name} is created")
 
-def save_nuc_movement_stat(features): # IN PROGRESS
-    file_name = "movement_stat.csv"
+
+def save_movement_stat(features): # IN PROGRESS
     # header_row = ["Time point", "Time from experiment start, (min)", "Cell num"]
     # path = os.path.join(analysis_data_folders["analysis"], file_name +'_movement_stat.csv')
 
-    features.to_excel(analysis_data_folders["analysis"], file_name)
+    features.to_excel(analysis_data_folders["movement_tracking"] + "/movement_stat.xlsx",
+                        engine='xlsxwriter') # had to import xlsxwriter for this to work
 
-    # with open(path, mode='w') as stat_file:
-    #     csv_writer = csv.writer(stat_file, delimiter=',')
-    #     csv_writer.writerow(header_row)
-    #
-    #     for img_data in imgs_data_t:
-    #         n = img_data.cells_num
-    #         nuc_count.append(n)
-    #         t = img_data.time_point
-    #         time_from_experiment_start = img_data.channels_raw_data[0].time_point
-    #         time_points.append(time_from_experiment_start//60)
-    #         csv_writer.writerow([str(t), str(time_from_experiment_start//60), str(n)])
-
-    print(f"Movement stat for {file_name} is created")
-
+    print(f"Movement stat is created")
 
 def stitch_mask(input_folder, unet_img_size, num):
     img_col = []
@@ -233,11 +223,11 @@ class Analyzer(object):
             reader = BioformatReader(self.imgs_path, i, self.mask_channel_name)  # "reader" is a BioformatReader object,
             imgs_data_t = []
 
-            for t in range(reader.t_num):
+            for t in range(reader.t_num - 103):
                 if self.nuc_recognition_mode == 'unet':
                     nuc_mask = self.find_mask_based_on_unet(reader, t)
                     if self.trackMovement is True:
-                        features = self.find_object_locations(nuc_mask, features, analysis_data_folders["movement_tracking"], t)
+                        features = self.find_nuc_locations(nuc_mask, features, analysis_data_folders["movement_tracking"], t)
 
                 elif self.nuc_recognition_mode == 'thr':
                     nuc_mask = self.find_mask_based_on_thr(reader, t)
@@ -253,21 +243,22 @@ class Analyzer(object):
                                                          self.nuc_area_min_pixels_num, self.mask_channel_name, t)
                 imgs_data_t.append(img_data)
 
-            # if self.nuc_recognition_mode == 'unet':
-            #     final_nuc_mask = self.find_mask_based_on_unet(reader, reader.t_num)
-            #     fig = plt.figure(figsize = (10, 5))
-            #
-            #     search_range = 100 # Adjustable
-            #     trajectory = tp.link_df(features, search_range, memory=5) # Memory is Adjustable
-            #     tp.plot_traj(trajectory, superimpose=final_nuc_mask)
-            #
-            #     img_path = os.path.join(analysis_data_folders["movement_tracking"],
-            #                              't = ' + str(reader.t_num) + '.png')
-            #     fig.savefig(img_path, bbox_inches='tight', dpi=150)
+            # Plotting final figure with movement trails
+            if self.trackMovement is True:
+                final_cnt_img = cv2.imread(get_latest_image(analysis_data_folders["cnts_verification"]))
 
+                fig = plt.figure(figsize = (10, 5))
+                search_range = 100 # Adjustable
+                trajectory = tp.link_df(features, search_range, memory=5) # Memory is Adjustable
+                tp.plot_traj(trajectory, superimpose=final_cnt_img) # Opens a window for the current tracking frame
+                                                            # Window must be closed to keep the program running
+                img_path = os.path.join(analysis_data_folders["movement_tracking"], 'overall movement - t = ' + str(reader.t_num - 103) + '.png')
+                fig.savefig(img_path, bbox_inches='tight', dpi=150)
+
+            # Saving Excel stat files for nuc count and movement
             save_nuc_count_stat(imgs_data_t, save_graph=True)
             if self.trackMovement is True:
-                save_nuc_movement_stat(features)
+                save_movement_stat(features)
             imgs_data.append(imgs_data_t)
 
 
@@ -379,10 +370,18 @@ class Analyzer(object):
             cv2.fillPoly(clean_mask, pts=[cnt], color=(255, 255, 255))
         return clean_mask.astype('uint8')
 
-    def find_object_locations(self, nuc_mask, features, output_folder, t=0):
+    def find_nuc_locations(self, nuc_mask, features, output_folder, t=0):
 
         black = 0
+        cell_num = 1
         label_image = skimage.measure.label(nuc_mask, background=black)
+
+        # Adding a "blank" row
+        # features = features.append([{'y': np.NaN,
+        #                              'x': np.NaN,
+        #                              'frame': np.NaN,
+        #                              'cell #': np.NaN
+        #                              }, ])
 
         for region in skimage.measure.regionprops(label_image, intensity_image=nuc_mask):
             # Everywhere, skip small areas
@@ -396,17 +395,35 @@ class Analyzer(object):
             features = features.append([{'y': region.centroid[0],
                                          'x': region.centroid[1],
                                          'frame': t,
+                                         'cell #': cell_num
                                          }, ])
 
-        fig = plt.figure(figsize = (10, 5))
+            cell_num += 1
 
-        search_range = 100 # Adjustable
-        trajectory = tp.link_df(features, search_range, memory=5) # Memory is Adjustable
-        tp.plot_traj(trajectory, superimpose=nuc_mask) # Opens a window for the current tracking frame
-                                                       # Window must be closed to keep the program running
+        # Plotting figure with movement trails after each frame - ACTIVATE FOR DEBUGGING/CHECKING MOVEMENT
 
-        img_path = os.path.join(output_folder,
-                                't = ' + str(t) + '.png')
-        fig.savefig(img_path, bbox_inches='tight', dpi=150)
+        # fig = plt.figure(figsize = (10, 5))
+        # search_range = 100 # Adjustable
+        # trajectory = tp.link_df(features, search_range, memory=5) # Memory is Adjustable
+        # tp.plot_traj(trajectory, superimpose=nuc_mask) # Opens a window for the current tracking frame
+        #                                                # Window must be closed to keep the program running
+        # img_path = os.path.join(output_folder, 't = ' + str(t) + '.png')
+        # fig.savefig(img_path, bbox_inches='tight', dpi=150)
 
         return features
+
+def get_latest_image(dirpath, valid_extensions=('jpg','jpeg','png')):
+    """
+    Get the latest image file in the given directory
+    """
+
+    # get filepaths of all files and dirs in the given dir
+    valid_files = [os.path.join(dirpath, filename) for filename in os.listdir(dirpath)]
+    # filter out directories, no-extension, and wrong extension files
+    valid_files = [f for f in valid_files if '.' in f and \
+        f.rsplit('.',1)[-1] in valid_extensions and os.path.isfile(f)]
+
+    if not valid_files:
+        raise ValueError("No valid images in %s" % dirpath)
+
+    return max(valid_files, key=os.path.getmtime)

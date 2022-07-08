@@ -12,7 +12,7 @@ def main():
     mask_channel_name = "DAPI"
     analysis_type = "nuc_count" #"nuc_count" or "nuc_area_signal"
     isWatershed = True
-    trackMovement = False # toggles cell movement functionality - for timelapses
+    trackMovement = True # toggles cell movement functionality - for timelapses
 
     unet_model = r"unet\models\CP_epoch198.pth"  # path to the trained Unet model if the user chooses nuc_recognition_mode = unet if not can be None
 
