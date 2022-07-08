@@ -8,7 +8,6 @@ import math
 import cv2.cv2 as cv2
 import numpy as np
 import matplotlib.pyplot as plt
-import skimage
 import pandas as pd
 import trackpy as tp
 import xlsxwriter
@@ -186,6 +185,22 @@ def stitch_mask(input_folder, unet_img_size, num):
     # cv2.waitKey()
     return stitched_img
 
+def get_latest_image(dirpath, valid_extensions=('jpg','jpeg','png')):
+    """
+    Get the latest image file in the given directory
+    """
+
+    # get filepaths of all files and dirs in the given dir
+    valid_files = [os.path.join(dirpath, filename) for filename in os.listdir(dirpath)]
+    # filter out directories, no-extension, and wrong extension files
+    valid_files = [f for f in valid_files if '.' in f and \
+        f.rsplit('.',1)[-1] in valid_extensions and os.path.isfile(f)]
+
+    if not valid_files:
+        raise ValueError("No valid images in %s" % dirpath)
+
+    return max(valid_files, key=os.path.getmtime)
+
 
 class Analyzer(object):
     def __init__(self, bioformat_imgs_path, nuc_recognition_mode, analysis_type, nuc_threshold=None, unet_parm=None,
@@ -223,11 +238,12 @@ class Analyzer(object):
             reader = BioformatReader(self.imgs_path, i, self.mask_channel_name)  # "reader" is a BioformatReader object,
             imgs_data_t = []
 
-            for t in range(reader.t_num - 103):
+            # Can be adjusted to manipulate number of frames in timelapse that are analyzed
+            real_t = reader.t_num
+
+            for t in range(real_t):
                 if self.nuc_recognition_mode == 'unet':
                     nuc_mask = self.find_mask_based_on_unet(reader, t)
-                    if self.trackMovement is True:
-                        features = self.find_nuc_locations(nuc_mask, features, analysis_data_folders["movement_tracking"], t)
 
                 elif self.nuc_recognition_mode == 'thr':
                     nuc_mask = self.find_mask_based_on_thr(reader, t)
@@ -238,7 +254,9 @@ class Analyzer(object):
                     sys.exit()
 
                 channels_raw_data = reader.read_all_layers(t)
-                img_data = ImageData(filename, channels_raw_data, nuc_mask, self.nuc_area_min_pixels_num, t, self.isWatershed)
+                # NEW movement tracking goes through ImageData as follows
+                img_data = ImageData(filename, channels_raw_data, nuc_mask, self.nuc_area_min_pixels_num, t, self.isWatershed, self.trackMovement, features)
+                features = img_data.features
                 img_data.draw_and_save_cnts_for_channels(analysis_data_folders["cnts_verification"],
                                                          self.nuc_area_min_pixels_num, self.mask_channel_name, t)
                 imgs_data_t.append(img_data)
@@ -252,7 +270,7 @@ class Analyzer(object):
                 trajectory = tp.link_df(features, search_range, memory=5) # Memory is Adjustable
                 tp.plot_traj(trajectory, superimpose=final_cnt_img) # Opens a window for the current tracking frame
                                                             # Window must be closed to keep the program running
-                img_path = os.path.join(analysis_data_folders["movement_tracking"], 'overall movement - t = ' + str(reader.t_num - 103) + '.png')
+                img_path = os.path.join(analysis_data_folders["movement_tracking"], 'overall movement - t = ' + str(real_t) + '.png')
                 fig.savefig(img_path, bbox_inches='tight', dpi=150)
 
             # Saving Excel stat files for nuc count and movement
@@ -296,7 +314,7 @@ class Analyzer(object):
                                                      self.nuc_area_min_pixels_num, self.mask_channel_name)
             imgs_data.append(img_data)
 
-        save_stat(imgs_data)
+        save_stat(imgs_data) # imgs_data is a list of ImageData objects
 
     def find_mask_based_on_thr(self, reader, t=0):
         # Look at self._remove_small_particles function it can be helpful - might not need though?
@@ -369,61 +387,3 @@ class Analyzer(object):
                 continue
             cv2.fillPoly(clean_mask, pts=[cnt], color=(255, 255, 255))
         return clean_mask.astype('uint8')
-
-    def find_nuc_locations(self, nuc_mask, features, output_folder, t=0):
-
-        black = 0
-        cell_num = 1
-        label_image = skimage.measure.label(nuc_mask, background=black)
-
-        # Adding a "blank" row
-        # features = features.append([{'y': np.NaN,
-        #                              'x': np.NaN,
-        #                              'frame': np.NaN,
-        #                              'cell #': np.NaN
-        #                              }, ])
-
-        for region in skimage.measure.regionprops(label_image, intensity_image=nuc_mask):
-            # Everywhere, skip small areas
-            if region.area < 5:
-                continue
-            # Only white areas
-            if region.mean_intensity < 255:
-                continue
-
-            # Store features which survived the above criteria
-            features = features.append([{'y': region.centroid[0],
-                                         'x': region.centroid[1],
-                                         'frame': t,
-                                         'cell #': cell_num
-                                         }, ])
-
-            cell_num += 1
-
-        # Plotting figure with movement trails after each frame - ACTIVATE FOR DEBUGGING/CHECKING MOVEMENT
-
-        # fig = plt.figure(figsize = (10, 5))
-        # search_range = 100 # Adjustable
-        # trajectory = tp.link_df(features, search_range, memory=5) # Memory is Adjustable
-        # tp.plot_traj(trajectory, superimpose=nuc_mask) # Opens a window for the current tracking frame
-        #                                                # Window must be closed to keep the program running
-        # img_path = os.path.join(output_folder, 't = ' + str(t) + '.png')
-        # fig.savefig(img_path, bbox_inches='tight', dpi=150)
-
-        return features
-
-def get_latest_image(dirpath, valid_extensions=('jpg','jpeg','png')):
-    """
-    Get the latest image file in the given directory
-    """
-
-    # get filepaths of all files and dirs in the given dir
-    valid_files = [os.path.join(dirpath, filename) for filename in os.listdir(dirpath)]
-    # filter out directories, no-extension, and wrong extension files
-    valid_files = [f for f in valid_files if '.' in f and \
-        f.rsplit('.',1)[-1] in valid_extensions and os.path.isfile(f)]
-
-    if not valid_files:
-        raise ValueError("No valid images in %s" % dirpath)
-
-    return max(valid_files, key=os.path.getmtime)
