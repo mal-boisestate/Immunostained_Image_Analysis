@@ -13,6 +13,8 @@ def main():
     analysis_type = "nuc_count" #"nuc_count" or "nuc_area_signal"
     isWatershed = True
     trackMovement = True # toggles cell movement tracking functionality
+    trackEachFrame = False # Only works if trackMovement is True - will create and save a plot of cell movement for each
+                          # frame in a timelapse
 
     unet_model = r"unet\models\CP_epoch198.pth"  # path to the trained Unet model if the user chooses nuc_recognition_mode = unet if not can be None
 
@@ -27,7 +29,7 @@ def main():
 
     start = time.time()
     analyser = Analyzer(bioformat_imgs_path, nuc_recognition_mode, analysis_type, nuc_threshold, unet_parm, nuc_area_min_pixels_num,
-                        mask_channel_name, isWatershed, trackMovement)
+                        mask_channel_name, isWatershed, trackMovement, trackEachFrame)
     analyser.run_analysis()
     end = time.time()
     print("Total time is: ")

@@ -201,10 +201,21 @@ def get_latest_image(dirpath, valid_extensions=('jpg','jpeg','png')):
 
     return max(valid_files, key=os.path.getmtime)
 
+def plot_movement_trails(features, real_t):
+    final_cnt_img = cv2.imread(get_latest_image(analysis_data_folders["cnts_verification"]))
+
+    fig = plt.figure(figsize=(10, 5))
+    search_range = 100  # Adjustable
+    trajectory = tp.link_df(features, search_range, memory=5)  # Memory is Adjustable
+    tp.plot_traj(trajectory, superimpose=final_cnt_img)  # Opens a window for the current tracking frame
+    # Window must be closed to keep the program running
+    img_path = os.path.join(analysis_data_folders["movement_tracking"],
+                            'overall movement - t = ' + str(real_t) + '.png')
+    fig.savefig(img_path, bbox_inches='tight', dpi=150)
 
 class Analyzer(object):
     def __init__(self, bioformat_imgs_path, nuc_recognition_mode, analysis_type, nuc_threshold=None, unet_parm=None,
-                 nuc_area_min_pixels_num=0, mask_channel_name="DAPI", isWatershed=True, trackMovement=True):
+                 nuc_area_min_pixels_num=0, mask_channel_name="DAPI", isWatershed=False, trackMovement=False, trackEachFrame=False):
         self.imgs_path = bioformat_imgs_path
         self.nuc_recognition_mode = nuc_recognition_mode
         self.analysis_type = analysis_type
@@ -214,6 +225,7 @@ class Analyzer(object):
         self.mask_channel_name = mask_channel_name
         self.isWatershed = isWatershed
         self.trackMovement = trackMovement
+        self.trackEachFrame = trackEachFrame
 
 
     def run_analysis(self):
@@ -239,7 +251,7 @@ class Analyzer(object):
             imgs_data_t = []
 
             # Can be adjusted to manipulate number of frames in timelapse that are analyzed
-            real_t = reader.t_num
+            real_t = reader.t_num - 102
 
             for t in range(real_t):
                 if self.nuc_recognition_mode == 'unet':
@@ -261,24 +273,20 @@ class Analyzer(object):
                                                          self.nuc_area_min_pixels_num, self.mask_channel_name, t)
                 imgs_data_t.append(img_data)
 
+                # OPTIONAL - for plotting movement trails at every frame in a timelapse
+                if self.trackMovement is True and self.trackEachFrame is True:
+                    plot_movement_trails(features, t)
+
             # Plotting final figure with movement trails
             if self.trackMovement is True:
-                final_cnt_img = cv2.imread(get_latest_image(analysis_data_folders["cnts_verification"]))
-
-                fig = plt.figure(figsize = (10, 5))
-                search_range = 100 # Adjustable
-                trajectory = tp.link_df(features, search_range, memory=5) # Memory is Adjustable
-                tp.plot_traj(trajectory, superimpose=final_cnt_img) # Opens a window for the current tracking frame
-                                                            # Window must be closed to keep the program running
-                img_path = os.path.join(analysis_data_folders["movement_tracking"], 'overall movement - t = ' + str(real_t) + '.png')
-                fig.savefig(img_path, bbox_inches='tight', dpi=150)
+                plot_movement_trails(features, real_t)
 
             # Saving Excel stat files for nuc count and movement
             save_nuc_count_stat(imgs_data_t, save_graph=True)
             if self.trackMovement is True:
                 save_movement_stat(features)
-            imgs_data.append(imgs_data_t)
 
+            imgs_data.append(imgs_data_t)
 
 
     def analyse_signal_mask_area(self):

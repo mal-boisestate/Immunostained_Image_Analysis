@@ -1,5 +1,7 @@
 import numpy as np
 import pandas as pd
+import trackpy as tp
+import matplotlib.pyplot as plt
 import cv2 as cv2
 import os
 import math
@@ -19,6 +21,7 @@ class ImageData(object):
         self.cnts, self.features = self._get_nuc_cnts(isWatershed, nuc_area_min_pixels_num, time_point, trackMovement, features)
         self.cells_data, self.cells_num = self._analyse_signal_in_nuc_area(nuc_area_min_pixels_num)
         self.time_point = time_point
+        self.signals_list = [] # list that will contain signal intensities for each time point
 
 
     def _get_nuc_cnts(self, isWatershed, nuc_area_min_pixels_num, t=0, trackMovement=False, features=None): # add last three to ImageData object!
@@ -30,7 +33,7 @@ class ImageData(object):
         if not isWatershed:
             need_increment = True
             if trackMovement is True:
-                features = self.find_nuc_locations(self.nuc_mask, features, need_increment, t, cell_num)
+                features = self.find_nuc_locations(self.nuc_mask, features, need_increment, t, cell_num, 0, trackMovement)
             full_cnts = Contour.get_mask_cnts(self.nuc_mask) # contours drawn from provided nuc_mask (a binary 1/255 arr)
 
         else: # Applying watershed algorithm on the mask
@@ -45,18 +48,9 @@ class ImageData(object):
             labels = watershed(-distance, markers, mask=self.nuc_mask)
 
             # loops through labels and removes any cells that touch the edges of the frame
-            for x in range(0, len(labels)):
-                for y in range(0, len(labels)):
-                    if x == len(labels) - 1 and labels[y][x] != 0 \
-                            or (x == 0 and labels[y][x] != 0) or (y == len(labels) - 1 and labels[y][x] != 0) \
-                            or (y == 0 and labels[y][x] != 0):
-                        temp_elim = labels[y][x]
-                        for a in range(0, len(labels)):
-                            for b in range(0, len(labels)):
-                                if labels[b][a] == temp_elim:
-                                    labels[b][a] = 0
+            labels = self.remove_edge_cells(labels)
 
-            #Find cntrs
+            # Find cntrs
             for label in np.unique(labels): # np.unique() finds the unique element(s) of an array
                                             # in this case, any non-0 values (labeled coordinates) will stand out as unique
             # don't need iterable element in for loops?
@@ -66,9 +60,8 @@ class ImageData(object):
                                                                    # so that no bool array is needed
                 label_mask[labels == label] = 255
 
-                if trackMovement is True:
-                    features = self.find_nuc_locations(label_mask, features, need_increment, t, cell_num)
-                    cell_num += 1
+                features = self.find_nuc_locations(label_mask, features, need_increment, t, cell_num, 0, trackMovement)
+                cell_num += 1
 
                 full_cnts.extend(cv2.findContours(label_mask, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)[0])
                 # "extend" adds a specified element to the end of a given list
@@ -116,37 +109,67 @@ class ImageData(object):
             color_img = cv2.merge(merged_img)
             cv2.imwrite(color_img_path, color_img)
 
-    def find_nuc_locations(self, nuc_mask, features, need_increment, t=0, cell_num=1, output_folder=None):
+    def find_nuc_locations(self, nuc_mask, features, need_increment, t=0, cell_num=1, signal_intensity=0, trackMovement=False, output_folder=None):
 
-        black = 0
-        label_image = skimage.measure.label(nuc_mask, background=black)
+        if trackMovement is True:
 
-        for region in skimage.measure.regionprops(label_image, intensity_image=nuc_mask):
-            # Everywhere, skip small areas
-            if region.area < 5:
-                continue
-            # Only white areas
-            if region.mean_intensity < 255:
-                continue
+            black = 0
+            label_image = skimage.measure.label(nuc_mask, background=black)
 
-            # Store features which survived the above criteria
-            features = features.append([{'y': region.centroid[0],
-                                         'x': region.centroid[1],
-                                         'cell #': cell_num,
-                                         'frame': t
-                                         }, ])
+            for region in skimage.measure.regionprops(label_image, intensity_image=nuc_mask):
+                # Everywhere, skip small areas
+                if region.area < 5:
+                    continue
+                # Only white areas
+                if region.mean_intensity < 255:
+                    continue
 
-            if need_increment is True:
-                cell_num += 1
+                # signal intensity? - TODO
+                center = [region.centroid[0], region.centroid[1]]
 
-        # Plotting figure with movement trails after each frame - ACTIVATE FOR DEBUGGING/CHECKING MOVEMENT
+                # Store features which survived the above criteria
+                features = features.append([{'y': region.centroid[0],
+                                             'x': region.centroid[1],
+                                             'cell #': cell_num,
+                                             'frame': t,
+                                             'signal': signal_intensity
+                                             }, ])
 
-        # fig = plt.figure(figsize = (10, 5))
-        # search_range = 100 # Adjustable
-        # trajectory = tp.link_df(features, search_range, memory=5) # Memory is Adjustable
-        # tp.plot_traj(trajectory, superimpose=nuc_mask) # Opens a window for the current tracking frame
-        #                                                # Window must be closed to keep the program running
-        # img_path = os.path.join(output_folder, 't = ' + str(t) + '.png')
-        # fig.savefig(img_path, bbox_inches='tight', dpi=150)
+                if need_increment is True:
+                    cell_num += 1
 
         return features
+
+    def remove_edge_cells(self, labels): # removes cells that touch the edges of the frame
+        for x in range(0, len(labels)):
+            for y in range(0, len(labels)):
+                if x == len(labels) - 1 and labels[y][x] != 0 \
+                        or (x == 0 and labels[y][x] != 0) or (y == len(labels) - 1 and labels[y][x] != 0) \
+                        or (y == 0 and labels[y][x] != 0):
+                    temp_elim = labels[y][x]
+                    for a in range(0, len(labels)):
+                        for b in range(0, len(labels)):
+                            if labels[b][a] == temp_elim:
+                                labels[b][a] = 0
+
+        return labels
+
+    def new_analyse_signal_in_nuc_area(self, center, nuc_area_min_pixels_num): # NON-FUNCTIONAL - TODO
+        nuclei_area_data = []
+        for cnt in self.cnts:
+            mask = Contour.draw_cnt(cnt, self.nuc_mask.shape)
+            center = Contour.get_cnt_center(cnt)
+            area = cv2.contourArea(cnt)
+            if area < nuc_area_min_pixels_num:  # if it is noise not a nuc
+                continue
+            nucleus_area_data = NucAreaData(center, area)
+            signals = []
+            for channel in self.channels_raw_data:
+                cut_out_signal_img = np.multiply(mask, channel.img)
+                signal_sum = np.matrix.sum(np.asmatrix(cut_out_signal_img))
+                signal = Signal(channel.name, signal_sum)
+                signals.append(signal)
+
+            nucleus_area_data.update_signals(signals)
+            nuclei_area_data.append(nucleus_area_data)
+        return nuclei_area_data, len(nuclei_area_data)
