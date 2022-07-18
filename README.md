@@ -126,4 +126,6 @@ implementations as an alternative to the neural network approach.
 
 -Gunes Uzer
 
+-Sean Howard
+
 ### May want to include images?
