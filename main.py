@@ -6,15 +6,19 @@ import bioformats
 
 
 def main():
-    bioformat_imgs_path = r"C:\BioLab\img\Overnight DAPI"  # path to the folder that contains bio format images (czi, lif, ect) or path to the specific image
+    # bioformat_imgs_path = r"C:\BioLab\img\Overnight DAPI"  # path to the folder that contains bio format images (czi, lif, ect) or path to the specific image
     # bioformat_imgs_path = r"C:\BioLab\img\63x testing ground"
+    bioformat_imgs_path = r"D:\22-5-17 KASH CPD Ki67\24HR"
     nuc_recognition_mode = "unet"  # "unet" or "thr"
     mask_channel_name = "DAPI"
-    analysis_type = "nuc_count" #"nuc_count" or "nuc_area_signal"
     isWatershed = True
-    trackMovement = True # toggles cell movement tracking functionality
+    trackMovement = False # toggles cell movement tracking functionality
     trackEachFrame = False # Only works if trackMovement is True - will create and save a plot of cell movement for each
                           # frame in a timelapse
+
+    # Failsafe conditional(s) if things are missed above
+    if trackMovement is False:
+        trackEachFrame = False
 
     unet_model = r"unet\models\CP_epoch198.pth"  # path to the trained Unet model if the user chooses nuc_recognition_mode = unet if not can be None
 
@@ -28,7 +32,7 @@ def main():
     javabridge.start_vm(class_path=bioformats.JARS)
 
     start = time.time()
-    analyser = Analyzer(bioformat_imgs_path, nuc_recognition_mode, analysis_type, nuc_threshold, unet_parm, nuc_area_min_pixels_num,
+    analyser = Analyzer(bioformat_imgs_path, nuc_recognition_mode, nuc_threshold, unet_parm, nuc_area_min_pixels_num,
                         mask_channel_name, isWatershed, trackMovement, trackEachFrame)
     analyser.run_analysis()
     end = time.time()

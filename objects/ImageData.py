@@ -33,7 +33,7 @@ class ImageData(object):
         if not isWatershed:
             need_increment = True
             if trackMovement is True:
-                features = self.find_nuc_locations(self.nuc_mask, features, need_increment, t, cell_num, 0, trackMovement)
+                features = self.find_nuc_locations(self.nuc_mask, features, need_increment, t, cell_num, trackMovement)
             full_cnts = Contour.get_mask_cnts(self.nuc_mask) # contours drawn from provided nuc_mask (a binary 1/255 arr)
 
         else: # Applying watershed algorithm on the mask
@@ -60,7 +60,8 @@ class ImageData(object):
                                                                    # so that no bool array is needed
                 label_mask[labels == label] = 255
 
-                features = self.find_nuc_locations(label_mask, features, need_increment, t, cell_num, 0, trackMovement)
+                # there should only be 1 nucleus in each label_mask iteration
+                features = self.find_nuc_locations(label_mask, features, need_increment, t, cell_num, trackMovement)
                 cell_num += 1
 
                 full_cnts.extend(cv2.findContours(label_mask, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)[0])
@@ -109,7 +110,7 @@ class ImageData(object):
             color_img = cv2.merge(merged_img)
             cv2.imwrite(color_img_path, color_img)
 
-    def find_nuc_locations(self, nuc_mask, features, need_increment, t=0, cell_num=1, signal_intensity=0, trackMovement=False, output_folder=None):
+    def find_nuc_locations(self, nuc_mask, features, need_increment, t=0, cell_num=1, trackMovement=False, output_folder=None):
 
         if trackMovement is True:
 
@@ -124,15 +125,11 @@ class ImageData(object):
                 if region.mean_intensity < 255:
                     continue
 
-                # signal intensity? - TODO
-                center = [region.centroid[0], region.centroid[1]]
-
                 # Store features which survived the above criteria
                 features = features.append([{'y': region.centroid[0],
                                              'x': region.centroid[1],
                                              'cell #': cell_num,
-                                             'frame': t,
-                                             'signal': signal_intensity
+                                             'frame': t
                                              }, ])
 
                 if need_increment is True:
