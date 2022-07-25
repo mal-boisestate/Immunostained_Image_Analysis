@@ -6,13 +6,13 @@ import bioformats
 
 
 def main():
-    # bioformat_imgs_path = r"C:\BioLab\img\Overnight DAPI"  # path to the folder that contains bio format images (czi, lif, ect) or path to the specific image
+    bioformat_imgs_path = r"C:\BioLab\img\Overnight DAPI"  # path to the folder that contains bio format images (czi, lif, ect) or path to the specific image
     # bioformat_imgs_path = r"C:\BioLab\img\63x testing ground"
-    bioformat_imgs_path = r"D:\22-5-17 KASH CPD Ki67\24HR"
+    # bioformat_imgs_path = r"C:\Users\redso\Desktop\quant practice"
     nuc_recognition_mode = "unet"  # "unet" or "thr"
     mask_channel_name = "DAPI"
-    isWatershed = True
-    trackMovement = False # toggles cell movement tracking functionality
+    isWatershed = True # applies watershed to separate touching cells
+    trackMovement = True # toggles cell movement tracking functionality
     trackEachFrame = False # Only works if trackMovement is True - will create and save a plot of cell movement for each
                           # frame in a timelapse
 
@@ -26,7 +26,7 @@ def main():
     unet_model_scale = 1
     unet_img_size = (512, 512)
     unet_model_thrh = 0.5
-    nuc_area_min_pixels_num = 80 # Minimum pixel size of contiguous ROIs to be labeled as "cells"
+    nuc_area_min_pixels_num = 50 # Minimum pixel size of contiguous ROIs to be labeled as "cells"
     unet_parm = UnetParam(unet_model, unet_model_scale, unet_model_thrh, unet_img_size)
     nuc_threshold = 50 # None by default
     javabridge.start_vm(class_path=bioformats.JARS)
