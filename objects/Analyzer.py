@@ -8,6 +8,8 @@ import math
 import cv2.cv2 as cv2
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
+import trackpy as tp
 from unet.predict import run_predict_unet
 
 temp_folders = {
@@ -16,8 +18,10 @@ temp_folders = {
 }
 
 analysis_data_folders = {
-    "analysis": 'analysis_data/stat',
-    "cnts_verification": 'analysis_data/nuclei_area_verification'
+    "analysis": 'analysis_data/general_stats',
+    "cnts_verification": 'analysis_data/nuclei_area_verification',
+    "nuclei_count": 'analysis_data/nuclei_count',
+    "movement_tracking": 'analysis_data/movement_tracking'
 }
 
 
@@ -91,15 +95,15 @@ def prepare_folder(folder):
     for f in glob.glob(folder + "/*"):
         os.remove(f)
 
-
-def save_stat(imgs_data):
+def save_stat(imgs_data, isTimelapse): # TODO: Make this function work - plan is to create a separate stat file for each timelapse
     """
-    Extract and save statistical data
+    Extract and save statistical data for a timelapse
     :param imgs_data: an object that has image info
+    :param isTimelapse: a boolean determining whether the file(s) have more than one frame
     """
-    # 1. Check that channal names for all imagies the same
-    channels_names = [channel.name for channel in imgs_data[0].channels_raw_data]
-    for img_data in imgs_data:
+    # 1. Check that channel names for all images the same
+    channels_names = [channel.name for channel in imgs_data[0][0].channels_raw_data]
+    for img_data in imgs_data[0]:
         for i, name in enumerate(channels_names):
             if img_data.channels_raw_data[i].name != name:
                 print("Images cannot be analyzed."
@@ -107,24 +111,30 @@ def save_stat(imgs_data):
                 sys.exit()
 
     # 2.Create column names
-    header_row = ["Image name", "Cell id, #", "Cell center coordinates, (x, y)",
+    header_row = ["Frame", "Image name", "Cell id, #", "Cell center coordinates, (x, y)",
                   "Nucleus area, pixels"] + [name + ', intensity' for name in channels_names]
 
     # 3. Write data
-    path = os.path.join(analysis_data_folders["analysis"], 'stat.csv')
-    with open(path, mode='w') as stat_file:
+    path = os.path.join(analysis_data_folders["analysis"], 'signal_quant_stat.csv')
+    with open(path, mode='w', newline='') as stat_file:
         csv_writer = csv.writer(stat_file, delimiter=',')
         csv_writer.writerow(header_row)
-        for img_data in imgs_data:
-            for i, cell in enumerate(img_data.cells_data):
-                csv_writer.writerow([img_data.path, str(i), str(cell.center), str(cell.area)] +
-                                    [signal.intensity for signal in cell.signals])
+        t = 0
+        for img_data_t in imgs_data:
+            for img_data in img_data_t:
+                for i, cell in enumerate(img_data.cells_data):
+                    csv_writer.writerow([t, img_data.path, str(i), str(cell.center), str(cell.area)] +
+                                        [signal.intensity for signal in cell.signals])
+                if isTimelapse is True:
+                    t += 1
+                csv_writer.writerow([None, None, None, None, None] +
+                                 [None for signal in cell.signals])
     print("Stat created")
 
 def save_nuc_count_stat(imgs_data_t, save_graph):
     file_name = os.path.splitext(imgs_data_t[0].path)[0]
     header_row = ["Time point", "Time from experiment start, (min)", "Cell num"]
-    path = os.path.join(analysis_data_folders["analysis"], file_name +'_time_point_stat.csv')
+    path = os.path.join(analysis_data_folders["nuclei_count"], file_name +'_time_point_stat.csv')
 
     nuc_count = []
     time_points = []
@@ -151,10 +161,20 @@ def save_nuc_count_stat(imgs_data_t, save_graph):
         # giving a title to my graph
         plt.title('Cell count over time')
         # function to save the plot
-        figure_path = os.path.join(analysis_data_folders["analysis"], file_name + '_time_point_stat.png')
+        figure_path = os.path.join(analysis_data_folders["nuclei_count"], file_name + '_time_point_stat.png')
         plt.savefig(figure_path)
+
     print(f"Stat for {file_name} is created")
 
+
+def save_movement_stat(features): # IN PROGRESS
+    # header_row = ["Time point", "Time from experiment start, (min)", "Cell num"]
+    # path = os.path.join(analysis_data_folders["analysis"], file_name +'_movement_stat.csv')
+
+    features.to_excel(analysis_data_folders["movement_tracking"] + "/movement_stat.xlsx",
+                        engine='xlsxwriter') # had to import xlsxwriter for this to work
+
+    print(f"Movement stat is created")
 
 def stitch_mask(input_folder, unet_img_size, num):
     img_col = []
@@ -170,41 +190,109 @@ def stitch_mask(input_folder, unet_img_size, num):
     # cv2.waitKey()
     return stitched_img
 
+def get_latest_image(dirpath, valid_extensions=('jpg','jpeg','png')):
+    """
+    Get the latest image file in the given directory
+    """
+
+    # get filepaths of all files and dirs in the given dir
+    valid_files = [os.path.join(dirpath, filename) for filename in os.listdir(dirpath)]
+    # filter out directories, no-extension, and wrong extension files
+    valid_files = [f for f in valid_files if '.' in f and \
+        f.rsplit('.',1)[-1] in valid_extensions and os.path.isfile(f)]
+
+    if not valid_files:
+        raise ValueError("No valid images in %s" % dirpath)
+
+    return max(valid_files, key=os.path.getmtime)
+
+# def centralize_trajectories(trajectory):
+#
+#     particle_num = 0
+#
+#     for particle in trajectory:
+#         for particles in particle:
+#             if particles == particle_num:
+#
+
+
+def make_trajectory_fig(trajectory, final_cnt_img, real_t):
+
+    fig = plt.figure(figsize=(10, 5))
+    tp.plot_traj(trajectory, superimpose=final_cnt_img)
+    img_path = os.path.join(analysis_data_folders["movement_tracking"],
+                            'overall movement - t = ' + str(real_t) + '.png')
+    fig.savefig(img_path, bbox_inches='tight', dpi=150)
+
+def plot_movement_trails(features, real_t):
+    final_cnt_img = cv2.imread(get_latest_image(analysis_data_folders["cnts_verification"]))
+
+    search_range = 100  # Adjustable
+    trajectory = tp.link_df(features, search_range, memory=5)  # Memory is Adjustable
+    make_trajectory_fig(trajectory, final_cnt_img, real_t)
+
+    # Window must be closed to keep the program running TODO: Make figure close automatically?
+
+    # IDEA: Save the DataFrames and create every plot at the end of the analysis?
+    # Would still have the same problem, concentrated at the end... might still be a decent workaround
+
+    # 7/22 PLAN: - nvm ask Nina
+    # 1) Take the trajectories data made from tp.link_df - where particles are already labeled
+    # 2) Find displacement to take all coordinates for each particle origin to center (1024, 1024) - specific to each particle
+    # 3) Once every coordinate is updated, superimpose this on the plot of choice
 
 class Analyzer(object):
-    def __init__(self, bioformat_imgs_path, nuc_recognition_mode, analysis_type, nuc_threshold=None, unet_parm=None,
-                 nuc_area_min_pixels_num=0, mask_channel_name="DAPI", isWatershed=True):
+    def __init__(self, bioformat_imgs_path, nuc_recognition_mode, nuc_threshold=None, unet_parm=None,
+                 nuc_area_min_pixels_num=0, mask_channel_name="DAPI", isWatershed=False, trackMovement=False,
+                 trackEachFrame=False, isTimelapse=False):
         self.imgs_path = bioformat_imgs_path
         self.nuc_recognition_mode = nuc_recognition_mode
-        self.analysis_type = analysis_type
         self.nuc_threshold = nuc_threshold
         self.unet_parm = unet_parm
         self.nuc_area_min_pixels_num = nuc_area_min_pixels_num
         self.mask_channel_name = mask_channel_name
         self.isWatershed = isWatershed
+        self.trackMovement = trackMovement
+        self.trackEachFrame = trackEachFrame
+        self.isTimelapse = isTimelapse
 
 
     def run_analysis(self):
-        if self.analysis_type == "nuc_area_signal":
-            self.analyse_signal_mask_area()
-        elif self.analysis_type == "nuc_count":
-            self.analyse_nuc_num_time_point()
-        else:
-            sys.exit("Please provide analysis type: \"nuc_area_signal\" or \"nuc_count\" ")
+        self.analyse_nuc_data()
 
 
-    def analyse_nuc_num_time_point(self):
+    def analyse_nuc_data(self):
+
         for folder in analysis_data_folders:
             prepare_folder(analysis_data_folders[folder])  # prepares analysis data folder
 
         imgs_data = []
+        features = pd.DataFrame()  # Contains identified objects and their locations at each frame
+
         for i, filename in enumerate(os.listdir(self.imgs_path)):
             for folder in temp_folders:
                 prepare_folder(temp_folders[folder])
             reader = BioformatReader(self.imgs_path, i, self.mask_channel_name)  # "reader" is a BioformatReader object,
             imgs_data_t = []
 
-            for t in range(reader.t_num):
+            # Checks if the provided file is a single image or a timelapse
+            if reader.t_num <= 1:
+                self.isTimelapse = False
+            else:
+                self.isTimelapse = True
+
+            # Failsafe in case these weren't changed for non-timelapses in the main()
+            if self.isTimelapse is False:
+                self.trackMovement = False
+                self.trackEachFrame = False
+
+            # real_t can be adjusted to manipulate number of frames in timelapse that are analyzed
+            real_t = reader.t_num -102
+            if real_t < 0:
+                raise ValueError("'real_t' is less than 0; remember to check real_t when switching between still "
+                                 "images and timelapses for analysis")
+
+            for t in range(real_t):
                 if self.nuc_recognition_mode == 'unet':
                     nuc_mask = self.find_mask_based_on_unet(reader, t)
 
@@ -217,49 +305,30 @@ class Analyzer(object):
                     sys.exit()
 
                 channels_raw_data = reader.read_all_layers(t)
-                img_data = ImageData(filename, channels_raw_data, nuc_mask, self.nuc_area_min_pixels_num, t, self.isWatershed)
+                # NEW movement tracking goes through ImageData as follows
+                img_data = ImageData(filename, channels_raw_data, nuc_mask, self.nuc_area_min_pixels_num, t, self.isWatershed, self.trackMovement, features)
+                features = img_data.features
                 img_data.draw_and_save_cnts_for_channels(analysis_data_folders["cnts_verification"],
                                                          self.nuc_area_min_pixels_num, self.mask_channel_name, t)
                 imgs_data_t.append(img_data)
+
+                # OPTIONAL - for plotting movement trails at every frame in a timelapse
+                if self.trackMovement is True and self.trackEachFrame is True:
+                    plot_movement_trails(features, t)
+
+            # Plotting final figure with movement trails
+            if self.trackMovement is True:
+                plot_movement_trails(features, real_t)
+
+            # Saving Excel stat files for nuc count and movement
             save_nuc_count_stat(imgs_data_t, save_graph=True)
-            imgs_data.append(imgs_data_t)
+            if self.trackMovement is True:
+                save_movement_stat(features)
 
+            imgs_data.append(imgs_data_t) # Here, every imgs_data_t object represents a list of ImageData objects at each time point in a timelapse
 
+        save_stat(imgs_data, self.isTimelapse) # TODO: Make this function work and replace old stat writing - imgs_data is now a list of imgs_data_t, each of which is a list of ImageData objects
 
-    def analyse_signal_mask_area(self):
-        for folder in analysis_data_folders:
-            prepare_folder(analysis_data_folders[folder])  # prepares analysis data folder
-
-        imgs_data = []
-        for i, filename in enumerate(os.listdir(self.imgs_path)):
-            for folder in temp_folders:
-                prepare_folder(temp_folders[folder])
-            reader = BioformatReader(self.imgs_path, i, self.mask_channel_name) # "reader" is a BioformatReader object,
-                                                                                # containing all the information of the
-                                                                                # image type
-
-            # The above for loop (for i) runs through all of this code for each individual image in the folder
-            # Thus, the information in reader is specific to each individual image
-
-            # One of the option: for t_poin in range(reader.t_num):
-
-            if self.nuc_recognition_mode == 'unet':
-                nuc_mask = self.find_mask_based_on_unet(reader)
-
-            elif self.nuc_recognition_mode == 'thr':
-                nuc_mask = self.find_mask_based_on_thr(reader)
-
-            else:
-                print("The recognition mode is not specified or specified incorrectly. Please use \"unet\" or \"thr\"")
-                sys.exit()
-
-            channels_raw_data = reader.read_all_layers()
-            img_data = ImageData(filename, channels_raw_data, nuc_mask, self.nuc_area_min_pixels_num)
-            img_data.draw_and_save_cnts_for_channels(analysis_data_folders["cnts_verification"],
-                                                     self.nuc_area_min_pixels_num, self.mask_channel_name)
-            imgs_data.append(img_data)
-
-        save_stat(imgs_data)
 
     def find_mask_based_on_thr(self, reader, t=0):
         # Look at self._remove_small_particles function it can be helpful - might not need though?
