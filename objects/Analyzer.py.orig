@@ -306,12 +306,41 @@ class Analyzer(object):
                     sys.exit()
 
                 channels_raw_data = reader.read_all_layers(t)
+<<<<<<< Updated upstream
                 # NEW movement tracking goes through ImageData as follows
                 img_data = ImageData(filename, channels_raw_data, nuc_mask, self.nuc_area_min_pixels_num, t, self.isWatershed, self.trackMovement, features)
                 features = img_data.features
                 img_data.draw_and_save_cnts_for_channels(analysis_data_folders["cnts_verification"],
                                                          self.nuc_area_min_pixels_num, self.mask_channel_name, t)
                 imgs_data_t.append(img_data)
+=======
+                img_data = ImageData(filename, channels_raw_data, nuc_mask, self.nuc_area_min_pixels_num, t, self.isWatershed)
+
+                img_data.draw_and_save_cnts_for_channels(analysis_data_folders["cnts_verification"],
+                                                         self.nuc_area_min_pixels_num, self.mask_channel_name, t)
+                imgs_data_t.append(img_data)
+            with open('test_track_img.pickle', 'wb') as handle:
+                pickle.dump(imgs_data_t, handle, protocol=pickle.HIGHEST_PROTOCOL) #I used it to make file to trackpy_test
+            save_nuc_count_stat(imgs_data_t, save_graph=True)
+            imgs_data.append(imgs_data_t)
+
+
+
+    def analyse_signal_mask_area(self):
+        for folder in analysis_data_folders:
+            prepare_folder(analysis_data_folders[folder])  # prepares analysis data folder
+
+        imgs_data = []
+        for i, filename in enumerate(os.listdir(self.imgs_path)):
+            for folder in temp_folders:
+                prepare_folder(temp_folders[folder])
+            reader = BioformatReader(self.imgs_path, i, self.mask_channel_name) # "reader" is a BioformatReader object,
+                                                                                # containing all the information of the
+                                                                                # image type
+
+            # The above for loop (for i) runs through all of this code for each individual image in the folder
+            # Thus, the information in reader is specific to each individual image
+>>>>>>> Stashed changes
 
                 # OPTIONAL - for plotting movement trails at every frame in a timelapse
                 if self.trackMovement is True and self.trackEachFrame is True:
