@@ -6,7 +6,7 @@ import bioformats
 
 
 def main():
-    bioformat_imgs_path = r"C:\BioLab\img\Overnight DAPI"  # path to the folder that contains bio format images (czi, lif, ect) or path to the specific image
+    bioformat_imgs_path = r"D:\BioLab\img\Overnight time-lapse"  # path to the folder that contains bio format images (czi, lif, ect) or path to the specific image
     # bioformat_imgs_path = r"C:\BioLab\img\63x testing ground"
     # bioformat_imgs_path = r"C:\Users\redso\Desktop\quant practice"
     nuc_recognition_mode = "unet"  # "unet" or "thr"
