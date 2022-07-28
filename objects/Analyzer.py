@@ -96,7 +96,7 @@ def prepare_folder(folder):
     for f in glob.glob(folder + "/*"):
         os.remove(f)
 
-def save_stat(imgs_data, isTimelapse): # TODO: Make this function work - plan is to create a separate stat file for each timelapse
+def save_stat(imgs_data, isTimelapse, analysis_out_path): # TODO: Make this function work - plan is to create a separate stat file for each timelapse
     """
     Extract and save statistical data for a timelapse
     :param imgs_data: an object that has image info
@@ -116,7 +116,7 @@ def save_stat(imgs_data, isTimelapse): # TODO: Make this function work - plan is
                   "Nucleus area, pixels"] + [name + ', intensity' for name in channels_names]
 
     # 3. Write data
-    path = os.path.join(analysis_data_folders["analysis"], 'signal_quant_stat.csv')
+    path = os.path.join(analysis_out_path, analysis_data_folders["analysis"], 'signal_quant_stat.csv')
     with open(path, mode='w', newline='') as stat_file:
         csv_writer = csv.writer(stat_file, delimiter=',')
         csv_writer.writerow(header_row)
@@ -132,10 +132,10 @@ def save_stat(imgs_data, isTimelapse): # TODO: Make this function work - plan is
                                  [None for signal in cell.signals])
     print("Stat created")
 
-def save_nuc_count_stat(imgs_data_t, save_graph):
+def save_nuc_count_stat(imgs_data_t, save_graph, analysis_out_path):
     file_name = os.path.splitext(imgs_data_t[0].path)[0]
     header_row = ["Time point", "Time from experiment start, (min)", "Cell num"]
-    path = os.path.join(analysis_data_folders["nuclei_count"], file_name +'_time_point_stat.csv')
+    path = os.path.join(analysis_out_path, analysis_data_folders["nuclei_count"], file_name +'_time_point_stat.csv')
 
     nuc_count = []
     time_points = []
@@ -162,17 +162,17 @@ def save_nuc_count_stat(imgs_data_t, save_graph):
         # giving a title to my graph
         plt.title('Cell count over time')
         # function to save the plot
-        figure_path = os.path.join(analysis_data_folders["nuclei_count"], file_name + '_time_point_stat.png')
+        figure_path = os.path.join(analysis_out_path, analysis_data_folders["nuclei_count"], file_name + '_time_point_stat.png')
         plt.savefig(figure_path)
 
     print(f"Stat for {file_name} is created")
 
 
-def save_movement_stat(features): # IN PROGRESS
+def save_movement_stat(features, analysis_out_path): # IN PROGRESS
     # header_row = ["Time point", "Time from experiment start, (min)", "Cell num"]
     # path = os.path.join(analysis_data_folders["analysis"], file_name +'_movement_stat.csv')
 
-    features.to_excel(analysis_data_folders["movement_tracking"] + "/movement_stat.xlsx",
+    features.to_excel(os.path.join(analysis_out_path, analysis_data_folders["movement_tracking"], "movement_stat.xlsx"),
                         engine='xlsxwriter') # had to import xlsxwriter for this to work
 
     print(f"Movement stat is created")
@@ -217,20 +217,20 @@ def get_latest_image(dirpath, valid_extensions=('jpg','jpeg','png')):
 #
 
 
-def make_trajectory_fig(trajectory, final_cnt_img, real_t):
+def make_trajectory_fig(trajectory, final_cnt_img, real_t, analysis_out_path):
 
     fig = plt.figure(figsize=(10, 5))
     tp.plot_traj(trajectory, superimpose=final_cnt_img)
-    img_path = os.path.join(analysis_data_folders["movement_tracking"],
+    img_path = os.path.join(analysis_out_path, analysis_data_folders["movement_tracking"],
                             'overall movement - t = ' + str(real_t) + '.png')
     fig.savefig(img_path, bbox_inches='tight', dpi=150)
 
-def plot_movement_trails(features, real_t):
-    final_cnt_img = cv2.imread(get_latest_image(analysis_data_folders["cnts_verification"]))
+def plot_movement_trails(features, real_t, analysis_out_path):
+    final_cnt_img = cv2.imread(get_latest_image(os.path.join(analysis_out_path, analysis_data_folders["cnts_verification"])))
 
     search_range = 100  # Adjustable
     trajectory = tp.link_df(features, search_range, memory=5)  # Memory is Adjustable
-    make_trajectory_fig(trajectory, final_cnt_img, real_t)
+    make_trajectory_fig(trajectory, final_cnt_img, real_t,analysis_out_path)
 
     # Window must be closed to keep the program running TODO: Make figure close automatically?
 
@@ -245,7 +245,7 @@ def plot_movement_trails(features, real_t):
 class Analyzer(object):
     def __init__(self, bioformat_imgs_path, nuc_recognition_mode, nuc_threshold=None, unet_parm=None,
                  nuc_area_min_pixels_num=0, mask_channel_name="DAPI", isWatershed=False, trackMovement=False,
-                 trackEachFrame=False, isTimelapse=False):
+                 trackEachFrame=False, isTimelapse=False, analysis_out_path=""):
         self.imgs_path = bioformat_imgs_path
         self.nuc_recognition_mode = nuc_recognition_mode
         self.nuc_threshold = nuc_threshold
@@ -256,6 +256,7 @@ class Analyzer(object):
         self.trackMovement = trackMovement
         self.trackEachFrame = trackEachFrame
         self.isTimelapse = isTimelapse
+        self.analysis_out_path = analysis_out_path
 
 
     def run_analysis(self):
@@ -265,7 +266,7 @@ class Analyzer(object):
     def analyse_nuc_data(self):
 
         for folder in analysis_data_folders:
-            prepare_folder(analysis_data_folders[folder])  # prepares analysis data folder
+            prepare_folder(os.path.join(self.analysis_out_path, analysis_data_folders[folder]))  # prepares analysis data folder
 
         imgs_data = []
         features = pd.DataFrame()  # Contains identified objects and their locations at each frame
@@ -288,7 +289,7 @@ class Analyzer(object):
                 self.trackEachFrame = False
 
             # real_t can be adjusted to manipulate number of frames in timelapse that are analyzed
-            real_t = reader.t_num - 0
+            real_t = reader.t_num - 102
             if real_t < 0:
                 raise ValueError("'real_t' is less than 0; remember to check real_t when switching between still "
                                  "images and timelapses for analysis")
@@ -309,26 +310,26 @@ class Analyzer(object):
                 # NEW movement tracking goes through ImageData as follows
                 img_data = ImageData(filename, channels_raw_data, nuc_mask, self.nuc_area_min_pixels_num, t, self.isWatershed, self.trackMovement, features)
                 features = img_data.features
-                img_data.draw_and_save_cnts_for_channels(analysis_data_folders["cnts_verification"],
+                img_data.draw_and_save_cnts_for_channels(os.path.join(self.analysis_out_path, analysis_data_folders["cnts_verification"]),
                                                          self.nuc_area_min_pixels_num, self.mask_channel_name, t)
                 imgs_data_t.append(img_data)
 
                 # OPTIONAL - for plotting movement trails at every frame in a timelapse
                 if self.trackMovement is True and self.trackEachFrame is True:
-                    plot_movement_trails(features, t)
+                    plot_movement_trails(features, t, self.analysis_out_path)
 
             # Plotting final figure with movement trails
             if self.trackMovement is True:
-                plot_movement_trails(features, real_t)
+                plot_movement_trails(features, real_t, self.analysis_out_path)
 
             # Saving Excel stat files for nuc count and movement
-            save_nuc_count_stat(imgs_data_t, save_graph=True)
+            save_nuc_count_stat(imgs_data_t, save_graph=True, analysis_out_path=self.analysis_out_path)
             if self.trackMovement is True:
-                save_movement_stat(features)
+                save_movement_stat(features, self.analysis_out_path)
 
             imgs_data.append(imgs_data_t) # Here, every imgs_data_t object represents a list of ImageData objects at each time point in a timelapse
 
-        save_stat(imgs_data, self.isTimelapse) # TODO: Make this function work and replace old stat writing - imgs_data is now a list of imgs_data_t, each of which is a list of ImageData objects
+        save_stat(imgs_data, self.isTimelapse, self.analysis_out_path) # TODO: Make this function work and replace old stat writing - imgs_data is now a list of imgs_data_t, each of which is a list of ImageData objects
 
 
     def find_mask_based_on_thr(self, reader, t=0):
