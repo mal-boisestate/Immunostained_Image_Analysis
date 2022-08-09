@@ -86,7 +86,7 @@ def run_analysis():
     print(f"Nuc identification mode: {data_page.nuc_idnt_mode.get()}")
     nuc_recognition_mode = data_page.nuc_idnt_mode.get()
 
-    print(f"Threshold: {data_page.thr.get()}, or as int {int(float(data_page.thr.get()))}")
+    print(f"Pixel Threshold: {data_page.thr.get()}, or as int {int(float(data_page.thr.get()))}")
     nuc_threshold = int(float(data_page.thr.get()))
 
     print(f"Minimal nucleus area: {data_page.min_nuc_area.get()}")
@@ -118,9 +118,13 @@ def run_analysis():
                             int(nuc_area_min_pixels_num), nuc_threshold,
                             isWatershed, output_folder)
             #Send congrats e-mail
+            # TODO: Where email is actually written
             subject = "MAL: Results are ready"
             body = f"""
-            Your data were processed. You decided to save the results in the following folder on your computer: {output_folder}
+            Your data were processed. You decided to save the results in the following folder on your computer: 
+            
+            {output_folder}
+            
             ...Results description...
             """
             send_email(subject, body, email_receiver)
@@ -211,12 +215,12 @@ class DataCollectionPage:
         button_br_2 = ctk.CTkButton(master=input_parent, text="...", command=self.output_button, width=30)
         button_br_2.grid(row=0, column=1, padx=5)
 
-        # notification e-mail
+        # notification e-mail - just takes in the email address; it's not manipulated here
         ctk.CTkLabel(master=data_root, text='E-mail', anchor='w').grid(column=0, row=3, sticky=tk.W, padx=15, pady=15)
         ctk.CTkEntry(master=data_root, textvariable=self.email).grid(column=1, row=3, sticky=tk.W, padx=0, pady=15)
 
         # channel mask
-        ctk.CTkLabel(master=data_root, text='Mask', anchor='w').grid(column=0, row=4, sticky=tk.W, padx=15, pady=15)
+        ctk.CTkLabel(master=data_root, text='Nuclear Mask', anchor='w').grid(column=0, row=4, sticky=tk.W, padx=15, pady=15)
         mask_combobox = ctk.CTkComboBox(master=data_root, values=["DAPI", "Option2", "Option3"], variable=self.mask_channel)
         mask_combobox['values'] = ["DAPI", "Option2", "Option3"]
         # prevent typing a value
@@ -250,7 +254,7 @@ class DataCollectionPage:
 
         # threshold slider
         self.thr.set(30)
-        ctk.CTkLabel(master=data_root, text='Threshold', anchor='w').grid(column=0, row=6, sticky=tk.W, padx=15, pady=15)
+        ctk.CTkLabel(master=data_root, text='Pixel Threshold', anchor='w').grid(column=0, row=6, sticky=tk.W, padx=15, pady=15)
         slider_parent = ctk.CTkFrame(master=data_root, fg_color=None)
         slider_parent.grid(column=1, row=6, sticky=tk.EW, padx=0, pady=15)
         slider = ctk.CTkSlider(
@@ -270,7 +274,7 @@ class DataCollectionPage:
 
 
         #minimal nucleus area
-        ctk.CTkLabel(master=data_root, text='Minimal nucleus area', anchor='w').grid(column=0, row=7, sticky=tk.W, padx=15, pady=15)
+        ctk.CTkLabel(master=data_root, text='Minimum nucleus area', anchor='w').grid(column=0, row=7, sticky=tk.W, padx=15, pady=15)
         spin_box = ctk.CTkEntry(master=data_root, width=50, textvariable=self.min_nuc_area)
         spin_box.grid(column=1, row=7, sticky=tk.W, padx=0, pady=15)
 
