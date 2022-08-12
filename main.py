@@ -6,12 +6,12 @@ import bioformats
 
 
 def main():
-    # bioformat_imgs_path = r"C:\BioLab\img\63x"  # path to the folder that contains bio format images (czi, lif, ect) or path to the specific image
-    bioformat_imgs_path = r"C:\BioLab\img\63x testing ground"
+    # bioformat_imgs_path = r"C:\BioLab\img\Overnight DAPI"  # path to the folder that contains bio format images (czi, lif, ect) or path to the specific image
+    bioformat_imgs_path = r"C:\BioLab\img\testing ground"
     # bioformat_imgs_path = r"C:\Users\redso\Desktop\quant practice"
     nuc_recognition_mode = "unet"  # "unet" or "thr"
     mask_channel_name = "DAPI"
-    isWatershed = False # applies watershed to separate touching cells
+    isWatershed = True # applies watershed to separate touching cells
     trackMovement = False # toggles cell movement tracking functionality
     trackEachFrame = False # Only works if trackMovement is True - will create and save a plot of cell movement for each
                           # frame in a timelapse

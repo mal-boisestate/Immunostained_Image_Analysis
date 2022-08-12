@@ -32,10 +32,11 @@ class ImageData(object):
         cell_num = 1
 
         if not isWatershed:
+            new_nuc_mask = self.remove_edge_cells(self.nuc_mask)
             need_increment = True
             if trackMovement is True:
-                features = self.find_nuc_locations(self.nuc_mask, features, need_increment, t, cell_num, trackMovement)
-            full_cnts = Contour.get_mask_cnts(self.nuc_mask) # contours drawn from provided nuc_mask (a binary 1/255 arr)
+                features = self.find_nuc_locations(new_nuc_mask, features, need_increment, t, cell_num, trackMovement)
+            full_cnts = Contour.get_mask_cnts(new_nuc_mask) # contours drawn from provided nuc_mask (a binary 1/255 arr)
 
         else: # Applying watershed algorithm on the mask
             need_increment = False

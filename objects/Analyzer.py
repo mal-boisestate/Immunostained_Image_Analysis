@@ -12,6 +12,7 @@ import pandas as pd
 import trackpy as tp
 from unet.predict import run_predict_unet
 import pickle
+import xlsxwriter
 
 temp_folders = {
     "cut_8bit_img": 'temp/cut_img_for_unet',
@@ -130,7 +131,38 @@ def save_stat(imgs_data, isTimelapse, analysis_out_path): # TODO: Make this func
                     t += 1
                 csv_writer.writerow([None, None, None, None, None] +
                                  [None for signal in cell.signals])
-    print("Stat created")
+
+    print("csv stat created")
+
+
+    # TODO: xlsx approach
+
+    # workbook = xlsxwriter.Workbook('write_data.xlsx')
+    # worksheet = workbook.add_worksheet()
+    #
+    # for col_num, data in enumerate(header_row):
+    #     worksheet.write(0, col_num, data)
+    #
+    # t2 = 0
+    # row_placeholder = 0
+    #
+    # for img_data_t in imgs_data:
+    #     for img_data in img_data_t:
+    #         for i, cell in enumerate(img_data.cells_data):
+    #             row_contents = [t2, img_data.path, str(i), str(cell.center), str(cell.area)] + [signal.intensity for
+    #                                                                                             signal in cell.signals]
+    #             worksheet.write(i, 0, row_contents)
+    #             row_placeholder += 1
+    #
+    #         if isTimelapse is True:
+    #             t2 += 1
+    #
+    #         blank_row = [None, None, None, None, None] + [None for signal in cell.signals]
+    #         worksheet.write(row_placeholder, 0, blank_row)
+    #         row_placeholder += 1
+    #
+    # workbook.close()
+    # print("xlsx stat created")
 
 def save_nuc_count_stat(imgs_data_t, save_graph, analysis_out_path):
     file_name = os.path.splitext(imgs_data_t[0].path)[0]
