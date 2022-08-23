@@ -134,35 +134,13 @@ def save_stat(imgs_data, isTimelapse, analysis_out_path): # TODO: Make this func
 
     print("csv stat created")
 
-
     # TODO: xlsx approach
 
-    # workbook = xlsxwriter.Workbook('write_data.xlsx')
-    # worksheet = workbook.add_worksheet()
-    #
-    # for col_num, data in enumerate(header_row):
-    #     worksheet.write(0, col_num, data)
-    #
-    # t2 = 0
-    # row_placeholder = 0
-    #
-    # for img_data_t in imgs_data:
-    #     for img_data in img_data_t:
-    #         for i, cell in enumerate(img_data.cells_data):
-    #             row_contents = [t2, img_data.path, str(i), str(cell.center), str(cell.area)] + [signal.intensity for
-    #                                                                                             signal in cell.signals]
-    #             worksheet.write(i, 0, row_contents)
-    #             row_placeholder += 1
-    #
-    #         if isTimelapse is True:
-    #             t2 += 1
-    #
-    #         blank_row = [None, None, None, None, None] + [None for signal in cell.signals]
-    #         worksheet.write(row_placeholder, 0, blank_row)
-    #         row_placeholder += 1
-    #
-    # workbook.close()
-    # print("xlsx stat created")
+    filepath_in = path
+    filepath_out = os.path.join(analysis_out_path, analysis_data_folders["analysis"], 'signal_quant_xlsx.xlsx')
+    pd.read_csv(filepath_in, delimiter=",").to_excel(filepath_out, index=False)
+
+    os.remove(filepath_in)
 
 def save_nuc_count_stat(imgs_data_t, save_graph, analysis_out_path):
     file_name = os.path.splitext(imgs_data_t[0].path)[0]
@@ -321,7 +299,7 @@ class Analyzer(object):
                 self.trackEachFrame = False
 
             # real_t can be adjusted to manipulate number of frames in timelapse that are analyzed
-            real_t = reader.t_num - 104 # TEST
+            real_t = reader.t_num
             if real_t < 0:
                 raise ValueError("'real_t' is less than 0; remember to check real_t when switching between still "
                                  "images and timelapses for analysis")
