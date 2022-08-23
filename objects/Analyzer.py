@@ -321,7 +321,7 @@ class Analyzer(object):
                 self.trackEachFrame = False
 
             # real_t can be adjusted to manipulate number of frames in timelapse that are analyzed
-            real_t = reader.t_num
+            real_t = reader.t_num - 104 # TEST
             if real_t < 0:
                 raise ValueError("'real_t' is less than 0; remember to check real_t when switching between still "
                                  "images and timelapses for analysis")
