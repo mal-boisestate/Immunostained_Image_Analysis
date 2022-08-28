@@ -134,7 +134,7 @@ def save_stat(imgs_data, isTimelapse, analysis_out_path): # TODO: Make this func
 
     print("csv stat created")
 
-    # TODO: xlsx approach
+    # Conversion of csv file to xlsx file - removes original csv file
 
     filepath_in = path
     filepath_out = os.path.join(analysis_out_path, analysis_data_folders["analysis"], 'signal_quant_xlsx.xlsx')
@@ -255,7 +255,7 @@ def plot_movement_trails(features, real_t, analysis_out_path):
 class Analyzer(object):
     def __init__(self, bioformat_imgs_path, nuc_recognition_mode, nuc_threshold=None, unet_parm=None,
                  nuc_area_min_pixels_num=0, mask_channel_name="DAPI", isWatershed=False, trackMovement=False,
-                 trackEachFrame=False, isTimelapse=False, analysis_out_path=""):
+                 trackEachFrame=False, isTimelapse=False, number_cells=False, analysis_out_path=""):
         self.imgs_path = bioformat_imgs_path
         self.nuc_recognition_mode = nuc_recognition_mode
         self.nuc_threshold = nuc_threshold
@@ -266,6 +266,7 @@ class Analyzer(object):
         self.trackMovement = trackMovement
         self.trackEachFrame = trackEachFrame
         self.isTimelapse = isTimelapse
+        self.number_cells = number_cells
         self.analysis_out_path = analysis_out_path
 
 
@@ -288,6 +289,7 @@ class Analyzer(object):
             imgs_data_t = []
 
             # Checks if the provided file is a single image or a timelapse
+            # Also why we don't need to define isTimelapse in for the Analyzer object created in main()
             if reader.t_num <= 1:
                 self.isTimelapse = False
             else:
@@ -321,7 +323,7 @@ class Analyzer(object):
                 img_data = ImageData(filename, channels_raw_data, nuc_mask, self.nuc_area_min_pixels_num, t, self.isWatershed, self.trackMovement, features)
                 features = img_data.features
                 img_data.draw_and_save_cnts_for_channels(os.path.join(self.analysis_out_path, analysis_data_folders["cnts_verification"]),
-                                                         self.nuc_area_min_pixels_num, self.mask_channel_name, t)
+                                                         self.nuc_area_min_pixels_num, self.mask_channel_name, t, self.number_cells)
                 imgs_data_t.append(img_data)
 
                 # OPTIONAL - for plotting movement trails at every frame in a timelapse
