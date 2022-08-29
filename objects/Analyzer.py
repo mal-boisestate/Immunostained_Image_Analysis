@@ -12,6 +12,7 @@ import pandas as pd
 import trackpy as tp
 from unet.predict import run_predict_unet
 import pickle
+import xlsxwriter
 
 temp_folders = {
     "cut_8bit_img": 'temp/cut_img_for_unet',
@@ -130,7 +131,16 @@ def save_stat(imgs_data, isTimelapse, analysis_out_path): # TODO: Make this func
                     t += 1
                 csv_writer.writerow([None, None, None, None, None] +
                                  [None for signal in cell.signals])
-    print("Stat created")
+
+    print("csv stat created")
+
+    # TODO: xlsx approach
+
+    filepath_in = path
+    filepath_out = os.path.join(analysis_out_path, analysis_data_folders["analysis"], 'signal_quant_xlsx.xlsx')
+    pd.read_csv(filepath_in, delimiter=",").to_excel(filepath_out, index=False)
+
+    os.remove(filepath_in)
 
 def save_nuc_count_stat(imgs_data_t, save_graph, analysis_out_path):
     file_name = os.path.splitext(imgs_data_t[0].path)[0]
