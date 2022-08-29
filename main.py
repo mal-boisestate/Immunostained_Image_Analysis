@@ -11,7 +11,7 @@ def main():
     # bioformat_imgs_path = r"C:\Users\redso\Desktop\quant practice"
     nuc_recognition_mode = "unet"  # "unet" or "thr"
     mask_channel_name = "DAPI"
-    isWatershed = True # applies watershed to separate touching cells
+    isWatershed = False # applies watershed to separate touching cells
     trackMovement = False # toggles cell movement tracking functionality
     trackEachFrame = False # Only works if trackMovement is True - will create and save a plot of cell movement for each
                           # frame in a timelapse

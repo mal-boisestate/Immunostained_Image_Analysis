@@ -108,6 +108,10 @@ class ImageData(object):
             img_path = os.path.join(output_folder, base_img_name + '_' + channel.name + '_t-' + str(t) + '.png')
             img_8bit = cv2.normalize(channel.img, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8UC1)
             cv2.drawContours(img_8bit, cnts, -1, (255, 255, 50), 3)
+            for i, cnt in enumerate(cnts):
+                org = Contour.get_cnt_center(cnt)
+                cv2.putText(img_8bit, str(i), org, fontFace=cv2.FONT_HERSHEY_PLAIN, fontScale=3, color=(255, 255, 0), thickness=3)
+
             if channel.name == mask_img_name:
                 cv2.imwrite(img_path, img_8bit)
             merged_img.append(img_8bit)
