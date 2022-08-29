@@ -20,7 +20,7 @@ def main():
     if trackMovement is False:
         trackEachFrame = False
 
-    unet_model = r"D:\BioLab\src_matlab_alternative\checkpoints\CP_epoch22.pth"
+    unet_model = r"D:\BioLab\src_matlab_alternative\checkpoints\CP_epoch65.pth"
     # unet_model = r"unet\models\CP_epoch198.pth"  # path to the trained Unet model if the user chooses nuc_recognition_mode = unet if not can be None
 
     # Unet training process characteristics:
