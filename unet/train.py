@@ -14,11 +14,13 @@ from unet import UNet
 from torch.utils.tensorboard import SummaryWriter
 from unet.dataset import BasicDataset
 from torch.utils.data import DataLoader, random_split
+import os
+os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 
-dir_img = 'data/imgs/'
-dir_mask = 'data/masks/'
+dir_img = '../data/imgs/'
+dir_mask = '../data/masks/'
 
-dir_checkpoint = 'checkpoints/'
+dir_checkpoint = '../checkpoints/'
 
 
 def train_net(net,
@@ -58,7 +60,7 @@ def train_net(net,
     if net.n_classes > 1:
         criterion = nn.CrossEntropyLoss()
     else:
-        pos_weight = torch.tensor(2).to(device=device)  #pos_weight is weight corf white of pixels compare to black
+        pos_weight = torch.tensor(20).to(device=device)  #pos_weight is weight corf white of pixels compare to black
         criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 
     for epoch in range(epochs):
@@ -144,7 +146,8 @@ def get_args():
                         help='Load model from a .pth file')
     parser.add_argument('-s', '--scale', dest='scale', type=float, default=1.0,
                         help='Downscaling factor of the images')
-    parser.add_argument('-v', '--validation', dest='val', type=float, default=0,
+    parser.add_argument(
+        '-v', '--validation', dest='val', type=float, default=0.0,
                         help='Percent of the data that is used as validation (0-100)')
 
     return parser.parse_args()

@@ -12,12 +12,18 @@ from skimage.feature import peak_local_max
 from objects import Contour
 from objects.Structures import NucAreaData, Signal
 
+def run_erosion_dialation(nuc_mask):
+    kernel = np.ones((5, 5), np.uint8)
+    img_erosion = cv2.erode(nuc_mask, kernel, iterations=1)
+    img_dilation = cv2.dilate(nuc_mask, kernel, iterations=1)
+    return nuc_mask
+
 
 class ImageData(object):
     def __init__(self, path, channels_raw_data, nuc_mask, nuc_area_min_pixels_num, time_point=0, isWatershed=True, trackMovement=False, features=None):
         self.path = path
         self.channels_raw_data = channels_raw_data
-        self.nuc_mask = nuc_mask
+        self.nuc_mask = run_erosion_dialation(nuc_mask) #helps to remove
         self.cnts, self.features = self._get_nuc_cnts(isWatershed, nuc_area_min_pixels_num, time_point, trackMovement, features)
         self.cells_data, self.cells_num = self._analyse_signal_in_nuc_area(nuc_area_min_pixels_num)
         self.time_point = time_point
@@ -68,7 +74,6 @@ class ImageData(object):
                 full_cnts.extend(cv2.findContours(label_mask, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)[0])
                 # "extend" adds a specified element to the end of a given list
                 # Returns a list of contours
-
         return full_cnts, features
 
 
