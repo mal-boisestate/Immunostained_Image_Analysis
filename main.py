@@ -15,7 +15,6 @@ def main():
     trackMovement = False # toggles cell movement tracking functionality
     trackEachFrame = False # Only works if trackMovement is True - will create and save a plot of cell movement for each
                           # frame in a timelapse
-    number_cells = False # Toggles visible cell numbering in colored imgs
 
     # Failsafe conditional(s) if things are missed above
     if trackMovement is False:
@@ -34,7 +33,7 @@ def main():
 
     start = time.time()
     analyser = Analyzer(bioformat_imgs_path, nuc_recognition_mode, nuc_threshold, unet_parm, nuc_area_min_pixels_num,
-                        mask_channel_name, isWatershed, trackMovement, trackEachFrame, analysis_out_path="")
+                        mask_channel_name, isWatershed, trackMovement, trackEachFrame)
     analyser.run_analysis()
     end = time.time()
     print("Total time is: ")

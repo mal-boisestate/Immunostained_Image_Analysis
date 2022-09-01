@@ -31,12 +31,13 @@ class ImageData(object):
         full_cnts = []
         cell_num = 1
 
+        # TODO: Figure out why using remove_edge_cells breaks contour drawing when isWatershed = False
         if not isWatershed:
-            new_nuc_mask = self.remove_edge_cells(self.nuc_mask)
+            # new_nuc_mask = self.remove_edge_cells(self.nuc_mask)
             need_increment = True
             if trackMovement is True:
-                features = self.find_nuc_locations(new_nuc_mask, features, need_increment, t, cell_num, trackMovement)
-            full_cnts = Contour.get_mask_cnts(new_nuc_mask) # contours drawn from provided nuc_mask (a binary 1/255 arr)
+                features = self.find_nuc_locations(self.nuc_mask, features, need_increment, t, cell_num, trackMovement)
+            full_cnts = Contour.get_mask_cnts(self.nuc_mask) # contours drawn from provided nuc_mask (a binary 1/255 arr)
 
         else: # Applying watershed algorithm on the mask
             need_increment = False
@@ -93,7 +94,7 @@ class ImageData(object):
             nuclei_area_data.append(nucleus_area_data)
         return nuclei_area_data, len(nuclei_area_data)
 
-    def draw_and_save_cnts_for_channels(self, output_folder, nuc_area_min_pixels_num, mask_img_name, t=0, number_cells=False):
+    def draw_and_save_cnts_for_channels(self, output_folder, nuc_area_min_pixels_num, mask_img_name, t=0):
         base_img_name = os.path.splitext(os.path.basename(self.path))[0]
         cnts = [cnt for cnt in self.cnts if cv2.contourArea(cnt) > nuc_area_min_pixels_num]
         merged_img = []
@@ -102,7 +103,6 @@ class ImageData(object):
             img_path = os.path.join(output_folder, base_img_name + '_' + channel.name + '_t-' + str(t) + '.png')
             img_8bit = cv2.normalize(channel.img, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8UC1)
             cv2.drawContours(img_8bit, cnts, -1, (255, 255, 50), 3)
-
             if channel.name == mask_img_name:
                 cv2.imwrite(img_path, img_8bit)
             merged_img.append(img_8bit)
@@ -111,20 +111,6 @@ class ImageData(object):
             color_img_path = os.path.join(output_folder,
                                     base_img_name + '_color' + '_t-' + str(t) +'.png')
             color_img = cv2.merge(merged_img)
-
-            """Visible cell numbering functionality"""
-            if number_cells is True:
-                cell_num = 0
-                for cnt in self.cnts:
-                    center = Contour.get_cnt_center(cnt)
-                    area = cv2.contourArea(cnt)
-                    if area < nuc_area_min_pixels_num:
-                        continue
-                    cv2.putText(color_img, str(cell_num), center, cv2.FONT_HERSHEY_SIMPLEX, 1, color=(255, 255, 255),
-                            thickness=3, lineType=cv2.LINE_AA)
-                    # cv2.imshow("window_name", img_8bit)
-                    cell_num += 1
-
             cv2.imwrite(color_img_path, color_img)
 
     def find_nuc_locations(self, nuc_mask, features, need_increment, t=0, cell_num=1, trackMovement=False, output_folder=None):
