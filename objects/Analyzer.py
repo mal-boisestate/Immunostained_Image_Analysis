@@ -114,7 +114,8 @@ def save_stat(imgs_data, isTimelapse, analysis_out_path): # TODO: Make this func
 
     # 2.Create column names
     header_row = ["Frame", "Image name", "Cell id, #", "Cell center coordinates, (x, y)",
-                  "Nucleus area, pixels"] + [name + ', intensity' for name in channels_names]
+                  "Nucleus area, pixels"] + ['Total intensity, ' + name for name in channels_names] + \
+                 ['Average intensity, ' + name for name in channels_names]
 
     # 3. Write data
     path = os.path.join(analysis_out_path, analysis_data_folders["analysis"], 'signal_quant_stat.csv')
@@ -126,7 +127,8 @@ def save_stat(imgs_data, isTimelapse, analysis_out_path): # TODO: Make this func
             for img_data in img_data_t:
                 for i, cell in enumerate(img_data.cells_data):
                     csv_writer.writerow([t, img_data.path, str(i), str(cell.center), str(cell.area)] +
-                                        [signal.intensity for signal in cell.signals])
+                                        [signal.intensity for signal in cell.signals] +
+                                        [signal.intensity/cell.area for signal in cell.signals])
                 if isTimelapse is True:
                     t += 1
                 csv_writer.writerow([None, None, None, None, None] +

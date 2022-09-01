@@ -1,3 +1,4 @@
+import sys
 import numpy as np
 import pandas as pd
 import trackpy as tp
@@ -12,12 +13,18 @@ from skimage.feature import peak_local_max
 from objects import Contour
 from objects.Structures import NucAreaData, Signal
 
+def run_erosion_dialation(nuc_mask):
+    kernel = np.ones((5, 5), np.uint8)
+    img_erosion = cv2.erode(nuc_mask, kernel, iterations=1)
+    img_dilation = cv2.dilate(nuc_mask, kernel, iterations=1)
+    return nuc_mask
+
 
 class ImageData(object):
     def __init__(self, path, channels_raw_data, nuc_mask, nuc_area_min_pixels_num, time_point=0, isWatershed=True, trackMovement=False, features=None):
         self.path = path
         self.channels_raw_data = channels_raw_data
-        self.nuc_mask = nuc_mask
+        self.nuc_mask = run_erosion_dialation(nuc_mask) #helps to remove
         self.cnts, self.features = self._get_nuc_cnts(isWatershed, nuc_area_min_pixels_num, time_point, trackMovement, features)
         self.cells_data, self.cells_num = self._analyse_signal_in_nuc_area(nuc_area_min_pixels_num)
         self.time_point = time_point
@@ -27,17 +34,16 @@ class ImageData(object):
 
     def _get_nuc_cnts(self, isWatershed, nuc_area_min_pixels_num, t=0, trackMovement=False, features=None): # add last three to ImageData object!
         # features is the DataFrame object to which cell location data will be added
-
+        self.remove_edge_cells() #  Remove cells on the edge of image from the nucleus mask
         full_cnts = []
         cell_num = 1
 
-        # TODO: Figure out why using remove_edge_cells breaks contour drawing when isWatershed = False
         if not isWatershed:
-            # new_nuc_mask = self.remove_edge_cells(self.nuc_mask)
+            new_nuc_mask = self.nuc_mask
             need_increment = True
             if trackMovement is True:
-                features = self.find_nuc_locations(self.nuc_mask, features, need_increment, t, cell_num, trackMovement)
-            full_cnts = Contour.get_mask_cnts(self.nuc_mask) # contours drawn from provided nuc_mask (a binary 1/255 arr)
+                features = self.find_nuc_locations(new_nuc_mask, features, need_increment, t, cell_num, trackMovement)
+            full_cnts = Contour.get_mask_cnts(new_nuc_mask) # contours drawn from provided nuc_mask (a binary 1/255 arr)
 
         else: # Applying watershed algorithm on the mask
             need_increment = False
@@ -51,7 +57,6 @@ class ImageData(object):
             labels = watershed(-distance, markers, mask=self.nuc_mask)
 
             # loops through labels and removes any cells that touch the edges of the frame
-            labels = self.remove_edge_cells(labels)
 
             # Find cntrs
             for label in np.unique(labels): # np.unique() finds the unique element(s) of an array
@@ -103,6 +108,10 @@ class ImageData(object):
             img_path = os.path.join(output_folder, base_img_name + '_' + channel.name + '_t-' + str(t) + '.png')
             img_8bit = cv2.normalize(channel.img, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8UC1)
             cv2.drawContours(img_8bit, cnts, -1, (255, 255, 50), 3)
+            for i, cnt in enumerate(cnts):
+                org = Contour.get_cnt_center(cnt)
+                cv2.putText(img_8bit, str(i), org, fontFace=cv2.FONT_HERSHEY_PLAIN, fontScale=3, color=(255, 255, 0), thickness=3)
+
             if channel.name == mask_img_name:
                 cv2.imwrite(img_path, img_8bit)
             merged_img.append(img_8bit)
@@ -140,19 +149,19 @@ class ImageData(object):
 
         return features
 
-    def remove_edge_cells(self, labels): # removes cells that touch the edges of the frame
-        for x in range(0, len(labels)):
-            for y in range(0, len(labels)):
-                if x == len(labels) - 1 and labels[y][x] != 0 \
-                        or (x == 0 and labels[y][x] != 0) or (y == len(labels) - 1 and labels[y][x] != 0) \
-                        or (y == 0 and labels[y][x] != 0):
-                    temp_elim = labels[y][x]
-                    for a in range(0, len(labels)):
-                        for b in range(0, len(labels)):
-                            if labels[b][a] == temp_elim:
-                                labels[b][a] = 0
+    def remove_edge_cells(self): # removes cells that touch the edges of the frame
+        cnts = Contour.get_mask_cnts(self.nuc_mask)
+        max_x, max_y = self.nuc_mask.shape
 
-        return labels
+        if max_x != max_y:
+            sys.exit("The current version of the program can analyze only square shape images."
+                        "Please modify remove_edge_cells to overcome this issue.")
+
+        new_cnts = [cnt for cnt in cnts if cnt.max() < max_x - 2 and cnt.min() > 1]
+        nuc_mask_no_edge_cells = np.zeros(self.nuc_mask.shape, dtype="uint8")
+        cv2.drawContours(nuc_mask_no_edge_cells, new_cnts, -1, color=(255, 255, 255), thickness=cv2.FILLED)
+        self.nuc_mask = nuc_mask_no_edge_cells
+
 
     def new_analyse_signal_in_nuc_area(self, center, nuc_area_min_pixels_num): # NON-FUNCTIONAL - TODO
         nuclei_area_data = []
