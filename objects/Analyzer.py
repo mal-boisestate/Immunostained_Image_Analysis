@@ -136,7 +136,7 @@ def save_stat(imgs_data, isTimelapse, analysis_out_path): # TODO: Make this func
 
     print("csv stat created")
 
-    # TODO: xlsx approach
+    # Conversion of csv file to xlsx file - removes original csv file
 
     filepath_in = path
     filepath_out = os.path.join(analysis_out_path, analysis_data_folders["analysis"], 'signal_quant_xlsx.xlsx')
@@ -145,6 +145,16 @@ def save_stat(imgs_data, isTimelapse, analysis_out_path): # TODO: Make this func
     os.remove(filepath_in)
 
 def save_nuc_count_stat(imgs_data_t, save_graph, analysis_out_path):
+    """
+    Creates a csv sheet and line graph tracking # of nuclei in each image. Mainly useful for timelapses.
+
+    Args:
+        imgs_data_t: A list of ImageData objects
+        save_graph: A boolean that determines whether a plot tracking nucleus count over time is created
+        analysis_out_path: The directory where files will be located after creation
+
+    """
+
     file_name = os.path.splitext(imgs_data_t[0].path)[0]
     header_row = ["Time point", "Time from experiment start, (min)", "Cell num"]
     path = os.path.join(analysis_out_path, analysis_data_folders["nuclei_count"], file_name +'_time_point_stat.csv')
@@ -180,9 +190,15 @@ def save_nuc_count_stat(imgs_data_t, save_graph, analysis_out_path):
     print(f"Stat for {file_name} is created")
 
 
-def save_movement_stat(features, analysis_out_path): # IN PROGRESS
-    # header_row = ["Time point", "Time from experiment start, (min)", "Cell num"]
-    # path = os.path.join(analysis_data_folders["analysis"], file_name +'_movement_stat.csv')
+def save_movement_stat(features, analysis_out_path):
+    """
+    If movement is being tracked in a timelapse, this saves the raw frame, position, and cell id data in an excel sheet
+
+    Args:
+        features: A list of pd.DataFrame tables
+        analysis_out_path: The directory where the excel sheet will be located after creation
+
+    """
 
     features.to_excel(os.path.join(analysis_out_path, analysis_data_folders["movement_tracking"], "movement_stat.xlsx"),
                         engine='xlsxwriter') # had to import xlsxwriter for this to work
@@ -190,6 +206,19 @@ def save_movement_stat(features, analysis_out_path): # IN PROGRESS
     print(f"Movement stat is created")
 
 def stitch_mask(input_folder, unet_img_size, num):
+    """
+    If unet is used for nuc mask, this stitches the parts created by cut_image back together for the full mask
+
+    Args:
+        input_folder: The directory where cut mask pieces are located
+        unet_img_size: The (length x width) in pixels of the cut unet images. Currently unused? # TODO: Check if needed
+        num: An int representing the number of cut pieces that make up the whole mask
+
+    Returns:
+        stitched_img: Full 2048x2048 pxl mask for a single image file/frame formed from concatenated 512x512 pieces
+
+    """
+
     img_col = []
     for i in range(num):
         img_row = []
@@ -198,14 +227,24 @@ def stitch_mask(input_folder, unet_img_size, num):
             img_row.append(nucleus_img)
         img_col.append(cv2.hconcat(img_row))
     stitched_img = cv2.vconcat(img_col)
-    # img_no_padding = remove_padding(stitched_img) #TODO this function shuld be created in case if img was padded before
+    # img_no_padding = remove_padding(stitched_img) #TODO this function should be created in case img was padded before
     # cv2.imshow("stitched_mask", cv2.resize(stitched_img, (750, 750)))  # keep it for debugging
     # cv2.waitKey()
+
     return stitched_img
+
 
 def get_latest_image(dirpath, valid_extensions=('jpg','jpeg','png')):
     """
-    Get the latest image file in the given directory
+    Get the last image file (alphabetically) in the given directory
+
+    Args:
+        dirpath: Directory where images, including desired last image, are located
+        valid_extensions: Valid file types recognized by the function - jpg, jpeg, and png
+
+    Returns:
+        The last image file in the given directory, ordered alphabetically
+
     """
 
     # get filepaths of all files and dirs in the given dir
@@ -219,17 +258,19 @@ def get_latest_image(dirpath, valid_extensions=('jpg','jpeg','png')):
 
     return max(valid_files, key=os.path.getmtime)
 
-# def centralize_trajectories(trajectory):
-#
-#     particle_num = 0
-#
-#     for particle in trajectory:
-#         for particles in particle:
-#             if particles == particle_num:
-#
-
 
 def make_trajectory_fig(trajectory, final_cnt_img, real_t, analysis_out_path):
+    """
+    For timelapses with movement tracking, creates a figure showing cell movement paths superimposed on the mask of the
+    final frame
+
+    Args:
+        trajectory: A modified pd.DataFrame table used in timelapse movement tracking
+        final_cnt_img: The last mask image (alphabetically) in a given directory, found by get_latest_image
+        real_t: The last analyzed frame of the timelapse
+        analysis_out_path: The directory where the figure will be located after creation
+
+    """
 
     fig = plt.figure(figsize=(10, 5))
     tp.plot_traj(trajectory, superimpose=final_cnt_img)
@@ -237,7 +278,19 @@ def make_trajectory_fig(trajectory, final_cnt_img, real_t, analysis_out_path):
                             'overall movement - t = ' + str(real_t) + '.png')
     fig.savefig(img_path, bbox_inches='tight', dpi=150)
 
+
 def plot_movement_trails(features, real_t, analysis_out_path):
+    """
+    For a timelapse, this calculates and produces movement data for each cell over time, and provides that data to
+    make_trajectory_fig to produce a figure.
+
+    Args:
+        features: A list of pd.DataFrame tables
+        real_t: The last analyzed frame of the timelapse
+        analysis_out_path: The directory where the figure will be located after creation
+
+    """
+
     final_cnt_img = cv2.imread(get_latest_image(os.path.join(analysis_out_path, analysis_data_folders["cnts_verification"])))
 
     search_range = 100  # Adjustable
@@ -246,13 +299,6 @@ def plot_movement_trails(features, real_t, analysis_out_path):
 
     # Window must be closed to keep the program running TODO: Make figure close automatically?
 
-    # IDEA: Save the DataFrames and create every plot at the end of the analysis?
-    # Would still have the same problem, concentrated at the end... might still be a decent workaround
-
-    # 7/22 PLAN: - nvm ask Nina
-    # 1) Take the trajectories data made from tp.link_df - where particles are already labeled
-    # 2) Find displacement to take all coordinates for each particle origin to center (1024, 1024) - specific to each particle
-    # 3) Once every coordinate is updated, superimpose this on the plot of choice
 
 class Analyzer(object):
     def __init__(self, bioformat_imgs_path, nuc_recognition_mode, nuc_threshold=None, unet_parm=None,
@@ -272,21 +318,31 @@ class Analyzer(object):
 
 
     def run_analysis(self):
+        """
+
+        Runs the analysis script
+
+        """
+
         self.analyse_nuc_data()
 
 
     def analyse_nuc_data(self):
+        """
 
+        Function that carries out the image analysis
+
+        """
         for folder in analysis_data_folders:
-            prepare_folder(os.path.join(self.analysis_out_path, analysis_data_folders[folder]))  # prepares analysis data folder
+            prepare_folder(os.path.join(self.analysis_out_path, analysis_data_folders[folder]))
 
         imgs_data = []
-        features = pd.DataFrame()  # Contains identified objects and their locations at each frame
+        features = pd.DataFrame()
 
         for i, filename in enumerate(os.listdir(self.imgs_path)):
             for folder in temp_folders:
                 prepare_folder(temp_folders[folder])
-            reader = BioformatReader(self.imgs_path, i, self.mask_channel_name)  # "reader" is a BioformatReader object,
+            reader = BioformatReader(self.imgs_path, i, self.mask_channel_name)  # "reader" is a BioformatReader object
             imgs_data_t = []
 
             # Checks if the provided file is a single image or a timelapse
@@ -319,14 +375,13 @@ class Analyzer(object):
                     sys.exit()
 
                 channels_raw_data = reader.read_all_layers(t)
-                # NEW movement tracking goes through ImageData as follows
                 img_data = ImageData(filename, channels_raw_data, nuc_mask, self.nuc_area_min_pixels_num, t, self.isWatershed, self.trackMovement, features)
                 features = img_data.features
                 img_data.draw_and_save_cnts_for_channels(os.path.join(self.analysis_out_path, analysis_data_folders["cnts_verification"]),
                                                          self.nuc_area_min_pixels_num, self.mask_channel_name, t)
                 imgs_data_t.append(img_data)
 
-                # OPTIONAL - for plotting movement trails at every frame in a timelapse
+                # OPTIONAL debugging conditional - for plotting movement trails at every frame in a timelapse
                 if self.trackMovement is True and self.trackEachFrame is True:
                     plot_movement_trails(features, t, self.analysis_out_path)
 
@@ -339,50 +394,34 @@ class Analyzer(object):
             if self.trackMovement is True:
                 save_movement_stat(features, self.analysis_out_path)
 
-            imgs_data.append(imgs_data_t) # Here, every imgs_data_t object represents a list of ImageData objects at each time point in a timelapse
+            imgs_data.append(imgs_data_t)
 
-        save_stat(imgs_data, self.isTimelapse, self.analysis_out_path) # TODO: Make this function work and replace old stat writing - imgs_data is now a list of imgs_data_t, each of which is a list of ImageData objects
+        save_stat(imgs_data, self.isTimelapse, self.analysis_out_path)
 
 
     def find_mask_based_on_thr(self, reader, t=0):
-        # Look at self._remove_small_particles function it can be helpful - might not need though?
-        # Logic flow: noise reduction (Gaussian filter) -> binary thresholding (0/255 scale) -> returning nuc_mask
-        # _remove_small_particles function - is it needed?
+        """
+        Creates nuclear masks through a pixel thresholding mechanism and a Gaussian filter
 
-        # reads czi image from reader and normalizes to 8bit image - bypassing need for conditional thresholding
+        Args:
+            reader: A BioformatReader object that contains czi image data
+            t: The time frame of an image file being analyzed; Mainly relevant for multi-frame timelapses
+
+        Returns:
+            nuc_mask: A binary nuclear mask created using the indicated nuclear identification algorithm
+
+        """
+
         nuc_img_8bit_norm, nuc_file_name = reader.read_nucleus_layers(t=t)
 
-        # produces a Gaussian blurred version of image; kernel is customizable (how to confirm?)
+        # produces a Gaussian blurred version of image; kernel is customizable
         gauss_nuc_8bit_norm = cv2.GaussianBlur(nuc_img_8bit_norm, (5, 5), 0)
-
-        # modifies each pixel in the blurred image, creating a binary image based on the user-provided threshold
-        # for x in range(0, len(gauss_nuc_8bit_norm)):
-        #    for y in range(0, len(gauss_nuc_8bit_norm)):
-        #        if gauss_nuc_8bit_norm[x][y] < self.nuc_threshold:
-        #            gauss_nuc_8bit_norm[x][y] = 0
-        #        else:
-        #            gauss_nuc_8bit_norm[x][y] = 255
-
-        # built-in binary functionality of numpy returns true/false array, which doesn't seem to work:
-        # gauss_nuc_8bit_bin = gauss_nuc_8bit_norm < self.nuc_threshold
-
-        # ALTERNATIVELY, could use built-in thresholding function - requires conversion to greyscale image:
-
-        # gauss_nuc_8bit_grey = cv2.cvtColor(gauss_nuc_8bit_norm, cv2.COLOR_BGR2GRAY)
         _, gauss_nuc_8bit_binary = cv2.threshold(gauss_nuc_8bit_norm, self.nuc_threshold, 255, cv2.THRESH_BINARY)
-
-        # the following lines are for debugging, and MAY BE TURNED OFF to prevent them from popping up
-        # cv2.imshow("original img", cv2.resize(nuc_img_8bit_norm, (750, 750)))
-        # cv2.imshow("gaussian blurred img", cv2.resize(gauss_nuc_8bit_norm, (750, 750)))  # keep it for debugging
-        # cv2.imshow("gaussian binary img", cv2.resize(gauss_nuc_8bit_binary, (750, 750)))  # keep it for debugging
-        # cv2.waitKey()
 
         nuc_mask = gauss_nuc_8bit_binary
         cv2.waitKey()
 
         return nuc_mask
-
-        # ALTERNATIVELY, could use built-in thresholding function - requires conversion to greyscale image (nope!)
 
     def find_mask_based_on_unet(self, reader, t=0):
         """
@@ -399,19 +438,22 @@ class Analyzer(object):
                          self.unet_parm.unet_model_scale,
                          self.unet_parm.unet_model_thrh)
         nuc_mask = stitch_mask(temp_folders["cut_mask"], self.unet_parm.unet_img_size, pieces_num)
-        # cv2.imshow("original nuc mask - unet", cv2.resize(nuc_mask, (750, 750)))
+
+        # DEBUGGING - cv2.imshow("original nuc mask - unet", cv2.resize(nuc_mask, (750, 750)))
 
         return nuc_mask
 
-    def _remove_small_particles(self, mask):
-        mask = cv2.morphologyEx(mask.astype('uint8'), cv2.MORPH_OPEN, np.ones((5, 5)))
-        mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, np.ones((5, 5)))
-        clean_mask = np.zeros(mask.shape)
-        cnts = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)[0]
-
-        for cnt in cnts:
-            area = cv2.contourArea(cnt)
-            if area < self.nuc_area_min_pixels_num:
-                continue
-            cv2.fillPoly(clean_mask, pts=[cnt], color=(255, 255, 255))
-        return clean_mask.astype('uint8')
+    # def _remove_small_particles(self, mask): TODO: Should we remove this? Seems like it's not used
+    #
+    #
+    #     mask = cv2.morphologyEx(mask.astype('uint8'), cv2.MORPH_OPEN, np.ones((5, 5)))
+    #     mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, np.ones((5, 5)))
+    #     clean_mask = np.zeros(mask.shape)
+    #     cnts = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)[0]
+    #
+    #     for cnt in cnts:
+    #         area = cv2.contourArea(cnt)
+    #         if area < self.nuc_area_min_pixels_num:
+    #             continue
+    #         cv2.fillPoly(clean_mask, pts=[cnt], color=(255, 255, 255))
+    #     return clean_mask.astype('uint8')
