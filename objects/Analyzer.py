@@ -97,9 +97,9 @@ def prepare_folder(folder):
     for f in glob.glob(folder + "/*"):
         os.remove(f)
 
-def save_stat(imgs_data, isTimelapse, analysis_out_path): # TODO: Make this function work - plan is to create a separate stat file for each timelapse
+def save_stat(imgs_data, isTimelapse, analysis_out_path):
     """
-    Extract and save statistical data for a timelapse
+    Extract and save statistical data for an image or timelapse
     :param imgs_data: an object that has image info
     :param isTimelapse: a boolean determining whether the file(s) have more than one frame
     """
@@ -143,6 +143,66 @@ def save_stat(imgs_data, isTimelapse, analysis_out_path): # TODO: Make this func
     pd.read_csv(filepath_in, delimiter=",").to_excel(filepath_out, index=False)
 
     os.remove(filepath_in)
+
+def save_avg_stat(imgs_data, analysis_out_path):
+    """
+        Extract and save average statistical data for images; Currently non-functional for timelapses
+        "Average" data is calculated as the total amount of stain in nuclear regions in an image divided by the number
+        of nuclei, giving average stain quantity/nucleus.
+
+        TODO: Make sure we're on the same page about "average". Stain/nucleus vs Stain density?
+
+        """
+    # 1. Check that channel names for all images the same
+    channels_names = [channel.name for channel in imgs_data[0][0].channels_raw_data]
+    for img_data in imgs_data[0]:
+        for i, name in enumerate(channels_names):
+            if img_data.channels_raw_data[i].name != name:
+                print("Images cannot be analyzed."
+                      "Channels are not in the same order for all images")
+                sys.exit()
+
+    # 2.Create column names
+    header_row = ["Frame", "Image name", "Cell count"] + ['Stain intensity density, ' + name for name in channels_names]
+
+    # 3. Write data
+    path = os.path.join(analysis_out_path, analysis_data_folders["analysis"], 'signal_avg_stat.csv')
+    with open(path, mode='w', newline='') as stat_file:
+        csv_writer = csv.writer(stat_file, delimiter=',')
+        csv_writer.writerow(header_row)
+
+        t = 0
+
+        for img_data_t in imgs_data:
+            for img_data in img_data_t:
+
+                sum_avg_signal_1 = 0
+                sum_avg_signal_2 = 0
+                sum_avg_signal_3 = 0
+                cells_total_area = 0
+                cell_num = 0
+
+                for i, cell in enumerate(img_data.cells_data):
+                    sum_avg_signal_1 += cell.signals[0].intensity / cell.area
+                    sum_avg_signal_2 += cell.signals[1].intensity / cell.area
+                    sum_avg_signal_3 += cell.signals[2].intensity / cell.area
+                    cell_num += 1
+
+                csv_writer.writerow([t, img_data.path, cell_num, sum_avg_signal_1 / cell_num, sum_avg_signal_2 / cell_num,
+                                     sum_avg_signal_3 / cell_num])
+
+                csv_writer.writerow([None, None, None, None, None, None])
+
+    print("csv avg stat created")
+
+    # Conversion of csv file to xlsx file - removes original csv file
+
+    filepath_in = path
+    filepath_out = os.path.join(analysis_out_path, analysis_data_folders["analysis"], 'signal_avg_xlsx.xlsx')
+    pd.read_csv(filepath_in, delimiter=",").to_excel(filepath_out, index=False)
+
+    os.remove(filepath_in)
+
 
 def save_nuc_count_stat(imgs_data_t, save_graph, analysis_out_path):
     """
@@ -397,6 +457,7 @@ class Analyzer(object):
             imgs_data.append(imgs_data_t)
 
         save_stat(imgs_data, self.isTimelapse, self.analysis_out_path)
+        save_avg_stat(imgs_data, self.analysis_out_path)
 
 
     def find_mask_based_on_thr(self, reader, t=0):
