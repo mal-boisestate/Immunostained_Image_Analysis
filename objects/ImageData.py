@@ -11,7 +11,7 @@ from scipy import ndimage as ndi
 from skimage.segmentation import watershed
 from skimage.feature import peak_local_max
 from objects import Contour
-from objects.Structures import NucAreaData, Signal
+from objects.Structures import NucData, Signal
 
 def run_erosion_dialation(nuc_mask):
     kernel = np.ones((5, 5), np.uint8)
@@ -21,31 +21,42 @@ def run_erosion_dialation(nuc_mask):
 
 
 class ImageData(object):
-    def __init__(self, path, channels_raw_data, nuc_mask, nuc_area_min_pixels_num, time_point=0, isWatershed=True, trackMovement=False, features=None):
+    def __init__(self, path, channels_raw_data, nuc_mask, nuc_area_min_pixels_num, time_point=0, isWatershed=True, trackMovement=False, features=None, perinuclearArea=False):
         self.path = path
         self.channels_raw_data = channels_raw_data
         self.nuc_mask = run_erosion_dialation(nuc_mask) #helps to remove
-        self.cnts, self.features = self._get_nuc_cnts(isWatershed, nuc_area_min_pixels_num, time_point, trackMovement, features)
+        self.cnts, self.features = self._get_nuc_cnts(isWatershed, nuc_area_min_pixels_num, time_point, trackMovement, features, perinuclearArea)
         self.cells_data, self.cells_num = self._analyse_signal_in_nuc_area(nuc_area_min_pixels_num)
         self.time_point = time_point
         # self.features = self._get_features() TODO: We can add other characteristics such as intensity  and area and organize it im one function
         self.signals_list = [] # list that will contain signal intensities for each time point
+        self.perinuclearArea = perinuclearArea # if user wants to include perinuclear area in analysis
 
 
-    def _get_nuc_cnts(self, isWatershed, nuc_area_min_pixels_num, t=0, trackMovement=False, features=None): # add last three to ImageData object!
+    def _get_nuc_cnts(self, isWatershed, nuc_area_min_pixels_num, t=0, trackMovement=False, features=None, perinuclearArea=False): # add last three to ImageData object!
         # features is the DataFrame object to which cell location data will be added
         # self.remove_edge_cells() #  Remove cells on the edge of image from the nucleus mask
         full_cnts = []
         cell_num = 1
 
         if not isWatershed:
-            new_nuc_mask = self.nuc_mask
+            if perinuclearArea is True:
+                kernel = np.ones((5, 5), np.uint8)
+                img_dilation = cv2.dilate(self.nuc_mask, kernel, iterations=1)
+                new_nuc_mask = img_dilation
+            else:
+                new_nuc_mask = self.nuc_mask
             need_increment = True
             if trackMovement is True:
                 features = self.find_nuc_locations(new_nuc_mask, features, need_increment, t, cell_num, trackMovement)
             full_cnts = Contour.get_mask_cnts(new_nuc_mask) # contours drawn from provided nuc_mask (a binary 1/255 arr)
 
         else: # Applying watershed algorithm on the mask
+            if perinuclearArea is True:
+                kernel = np.ones((5, 5), np.uint8)
+                img_dilation = cv2.dilate(self.nuc_mask, kernel, iterations=1)
+                self.nuc_mask = img_dilation
+
             need_increment = False
             distance = ndi.distance_transform_edt(self.nuc_mask)
             min_distance = 2 * int((nuc_area_min_pixels_num / math.pi) ** 1/2) # diameter that based on formula of Area of a circle
@@ -80,14 +91,17 @@ class ImageData(object):
 
 
     def _analyse_signal_in_nuc_area(self, nuc_area_min_pixels_num):
-        nuclei_area_data = []
+
+        nuclei_data = []
+
         for cnt in self.cnts:
             mask = Contour.draw_cnt(cnt, self.nuc_mask.shape)
             center = Contour.get_cnt_center(cnt)
             area = cv2.contourArea(cnt)
+            perimeter = cv2.arcLength(cnt, True)
             if area < nuc_area_min_pixels_num:  # if it is noise not a nuc
                 continue
-            nucleus_area_data = NucAreaData(center, area)
+            nucleus_data = NucData(center, area, perimeter)
             signals = []
             for channel in self.channels_raw_data:
                 cut_out_signal_img = np.multiply(mask, channel.img)
@@ -95,9 +109,10 @@ class ImageData(object):
                 signal = Signal(channel.name, signal_sum)
                 signals.append(signal)
 
-            nucleus_area_data.update_signals(signals)
-            nuclei_area_data.append(nucleus_area_data)
-        return nuclei_area_data, len(nuclei_area_data)
+            nucleus_data.update_signals(signals)
+            nuclei_data.append(nucleus_data)
+
+        return nuclei_data, len(nuclei_data)
 
     def draw_and_save_cnts_for_channels(self, output_folder, nuc_area_min_pixels_num, mask_img_name, t=0):
         base_img_name = os.path.splitext(os.path.basename(self.path))[0]
@@ -161,24 +176,3 @@ class ImageData(object):
         nuc_mask_no_edge_cells = np.zeros(self.nuc_mask.shape, dtype="uint8")
         cv2.drawContours(nuc_mask_no_edge_cells, new_cnts, -1, color=(255, 255, 255), thickness=cv2.FILLED)
         self.nuc_mask = nuc_mask_no_edge_cells
-
-
-    def new_analyse_signal_in_nuc_area(self, center, nuc_area_min_pixels_num): # NON-FUNCTIONAL - TODO
-        nuclei_area_data = []
-        for cnt in self.cnts:
-            mask = Contour.draw_cnt(cnt, self.nuc_mask.shape)
-            center = Contour.get_cnt_center(cnt)
-            area = cv2.contourArea(cnt)
-            if area < nuc_area_min_pixels_num:  # if it is noise not a nuc
-                continue
-            nucleus_area_data = NucAreaData(center, area)
-            signals = []
-            for channel in self.channels_raw_data:
-                cut_out_signal_img = np.multiply(mask, channel.img)
-                signal_sum = np.matrix.sum(np.asmatrix(cut_out_signal_img))
-                signal = Signal(channel.name, signal_sum)
-                signals.append(signal)
-
-            nucleus_area_data.update_signals(signals)
-            nuclei_area_data.append(nucleus_area_data)
-        return nuclei_area_data, len(nuclei_area_data)

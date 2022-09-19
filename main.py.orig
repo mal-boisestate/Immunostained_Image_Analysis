@@ -6,7 +6,11 @@ import bioformats
 
 
 def main():
+<<<<<<< HEAD
     bioformat_imgs_path = r"D:\BioLab\img\Chase_img\20x\Replicate 3 (6-7-22)\Control"  # path to the folder that contains bio format images (czi, lif, ect) or path to the specific image
+=======
+    bioformat_imgs_path = r"C:\BioLab\img\testing ground"  # path to the folder that contains bio format images (czi, lif, ect) or path to the specific image
+>>>>>>> a5c2f4ea468f3c4eeeae2aba59b10226de9fdc15
     nuc_recognition_mode = "unet"  # "unet" or "thr"
     mask_channel_name = "DAPI"
     isWatershed = False # applies watershed to separate touching cells
@@ -18,9 +22,14 @@ def main():
     if trackMovement is False:
         trackEachFrame = False
 
+<<<<<<< HEAD
     # unet_model = r"D:\BioLab\src_matlab_alternative\unet\models\CP_epoch65_only20x_no-aug.pth"
     # # unet_model = r"D:\BioLab\src_matlab_alternative\checkpoints\CP_epoch71.pth"
     unet_model = r"D:\BioLab\src_matlab_alternative\checkpoints\CP_epoch18.pth"  # path to the trained Unet model if the user chooses nuc_recognition_mode = unet if not can be None
+=======
+    unet_model = r"C:\BioLab2\Immunostained_Image_Analysis\unet\models\CP_epoch198.pth"
+    # unet_model = r"unet\models\CP_epoch198.pth"  # path to the trained Unet model if the user chooses nuc_recognition_mode = unet if not can be None
+>>>>>>> a5c2f4ea468f3c4eeeae2aba59b10226de9fdc15
 
     # Unet training process characteristics:
     unet_model_scale = 1
