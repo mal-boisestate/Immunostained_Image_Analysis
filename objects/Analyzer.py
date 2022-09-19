@@ -97,6 +97,7 @@ def prepare_folder(folder):
     for f in glob.glob(folder + "/*"):
         os.remove(f)
 
+
 def save_stat(imgs_data, isTimelapse, analysis_out_path): # TODO: Make this function work - plan is to create a separate stat file for each timelapse
     """
     Extract and save statistical data for a timelapse
@@ -133,6 +134,26 @@ def save_stat(imgs_data, isTimelapse, analysis_out_path): # TODO: Make this func
                     t += 1
                 csv_writer.writerow([None, None, None, None, None] +
                                  [None for signal in cell.signals])
+
+    #Save data for Chase
+    header_row = ["Image name", "Number of cells", "Total nucleus area"] + \
+                 ['Total intensity, ' + name for name in channels_names]
+
+    # 3. Write data
+    path = os.path.join(analysis_out_path, analysis_data_folders["analysis"], 'stat_for_Chase.csv')
+    with open(path, mode='w', newline='') as stat_file:
+        csv_writer = csv.writer(stat_file, delimiter=',')
+        csv_writer.writerow(header_row)
+        t = 0
+        for img_data in imgs_data:
+            cells_num = img_data[0].cells_num
+            total_nuc_area = 0
+            for cell in img_data[0].cells_data:
+                total_nuc_area += cell.area
+
+            csv_writer.writerow([img_data[0].path, str(cells_num), str(total_nuc_area)] +
+                                [np.sum(channel_intecity.img) for channel_intecity in img_data[0].channels_raw_data])
+
 
     print("csv stat created")
 
@@ -344,7 +365,6 @@ class Analyzer(object):
                 prepare_folder(temp_folders[folder])
             reader = BioformatReader(self.imgs_path, i, self.mask_channel_name)  # "reader" is a BioformatReader object
             imgs_data_t = []
-
             # Checks if the provided file is a single image or a timelapse
             if reader.t_num <= 1:
                 self.isTimelapse = False
@@ -395,7 +415,6 @@ class Analyzer(object):
                 save_movement_stat(features, self.analysis_out_path)
 
             imgs_data.append(imgs_data_t)
-
         save_stat(imgs_data, self.isTimelapse, self.analysis_out_path)
 
 
@@ -429,18 +448,31 @@ class Analyzer(object):
         :param reader:
         :return:
         """
+        does_cut_img = False
         nuc_img_8bit_norm, nuc_file_name = reader.read_nucleus_layers(t=t)
-        pieces_num = cut_image(nuc_img_8bit_norm, nuc_file_name, self.unet_parm.unet_img_size,
-                               temp_folders["cut_8bit_img"])
+        if does_cut_img:
 
-        run_predict_unet(temp_folders["cut_8bit_img"], temp_folders["cut_mask"],
+            pieces_num = cut_image(nuc_img_8bit_norm, nuc_file_name, self.unet_parm.unet_img_size,
+                                   temp_folders["cut_8bit_img"])
+
+            run_predict_unet(temp_folders["cut_8bit_img"], temp_folders["cut_mask"],
+                             self.unet_parm.unet_model_path,
+                             self.unet_parm.unet_model_scale,
+                             self.unet_parm.unet_model_thrh)
+            nuc_mask = stitch_mask(temp_folders["cut_mask"], self.unet_parm.unet_img_size, pieces_num)
+        else:
+            base_img_name = os.path.splitext(os.path.basename(nuc_file_name))[0]
+            img_path = os.path.join(temp_folders["cut_8bit_img"], base_img_name + '.png')
+            cv2.imwrite(img_path, nuc_img_8bit_norm)
+
+            run_predict_unet(temp_folders["cut_8bit_img"], temp_folders["cut_mask"],
                          self.unet_parm.unet_model_path,
                          self.unet_parm.unet_model_scale,
                          self.unet_parm.unet_model_thrh)
-        nuc_mask = stitch_mask(temp_folders["cut_mask"], self.unet_parm.unet_img_size, pieces_num)
+            img_path = os.path.join(temp_folders["cut_mask"], base_img_name + '.png')
+            nuc_mask = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
 
         # DEBUGGING - cv2.imshow("original nuc mask - unet", cv2.resize(nuc_mask, (750, 750)))
-
         return nuc_mask
 
     # def _remove_small_particles(self, mask): TODO: Should we remove this? Seems like it's not used
