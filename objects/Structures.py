@@ -25,10 +25,11 @@ class Signal(object):
         self.intensity = intensity
 
 
-class NucAreaData(object):
-    def __init__(self, center, area):
+class NucData(object):
+    def __init__(self, center, area, perimeter):
         self.area = area
         self.center = center
+        self.perimeter = perimeter
         self.signals = None
 
     def update_signals(self, signals):

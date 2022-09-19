@@ -6,18 +6,19 @@ import bioformats
 
 
 def main():
-    bioformat_imgs_path = r"C:\BioLab\img\63x"  # path to the folder that contains bio format images (czi, lif, ect) or path to the specific image
+    bioformat_imgs_path = r"C:\BioLab\img\testing ground"  # path to the folder that contains bio format images (czi, lif, ect) or path to the specific image
     nuc_recognition_mode = "unet"  # "unet" or "thr"
     mask_channel_name = "DAPI"
     isWatershed = False # applies watershed to separate touching cells
     trackMovement = False # toggles cell movement tracking functionality
     trackEachFrame = False # will create and save a plot of cell movement for each
+    perinuclearArea = True # Option to slightly dilate area analyzed per cell, to accommodate perinuclear stain
 
     # Failsafe conditional(s) if things are missed above
     if trackMovement is False:
         trackEachFrame = False
 
-    unet_model = r"D:\BioLab\src_matlab_alternative\checkpoints\CP_epoch65.pth"
+    unet_model = r"C:\BioLab2\Immunostained_Image_Analysis\unet\models\CP_epoch198.pth"
     # unet_model = r"unet\models\CP_epoch198.pth"  # path to the trained Unet model if the user chooses nuc_recognition_mode = unet if not can be None
 
     # Unet training process characteristics:
@@ -30,8 +31,9 @@ def main():
     javabridge.start_vm(class_path=bioformats.JARS)
 
     start = time.time()
+    # TODO Fix the organization of variables - particularly for perinuclearArea
     analyser = Analyzer(bioformat_imgs_path, nuc_recognition_mode, nuc_threshold, unet_parm, nuc_area_min_pixels_num,
-                        mask_channel_name, isWatershed, trackMovement, trackEachFrame)
+                        mask_channel_name, isWatershed, trackMovement, trackEachFrame, perinuclearArea)
     analyser.run_analysis()
     end = time.time()
     print("Total time is: ")

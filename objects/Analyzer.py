@@ -114,7 +114,7 @@ def save_stat(imgs_data, isTimelapse, analysis_out_path):
 
     # 2.Create column names
     header_row = ["Frame", "Image name", "Cell id, #", "Cell center coordinates, (x, y)",
-                  "Nucleus area, pixels"] + ['Total intensity, ' + name for name in channels_names] + \
+                  "Nucleus area, pixels", "Nucleus perimeter, pixels"] + ['Total intensity, ' + name for name in channels_names] + \
                  ['Average intensity, ' + name for name in channels_names]
 
     # 3. Write data
@@ -126,12 +126,12 @@ def save_stat(imgs_data, isTimelapse, analysis_out_path):
         for img_data_t in imgs_data:
             for img_data in img_data_t:
                 for i, cell in enumerate(img_data.cells_data):
-                    csv_writer.writerow([t, img_data.path, str(i), str(cell.center), str(cell.area)] +
+                    csv_writer.writerow([t, img_data.path, str(i), str(cell.center), str(cell.area), str(cell.perimeter)] +
                                         [signal.intensity for signal in cell.signals] +
                                         [signal.intensity/cell.area for signal in cell.signals])
                 if isTimelapse is True:
                     t += 1
-                csv_writer.writerow([None, None, None, None, None] +
+                csv_writer.writerow([None, None, None, None, None, None] +
                                  [None for signal in cell.signals])
 
     print("csv stat created")
@@ -363,7 +363,7 @@ def plot_movement_trails(features, real_t, analysis_out_path):
 class Analyzer(object):
     def __init__(self, bioformat_imgs_path, nuc_recognition_mode, nuc_threshold=None, unet_parm=None,
                  nuc_area_min_pixels_num=0, mask_channel_name="DAPI", isWatershed=False, trackMovement=False,
-                 trackEachFrame=False, isTimelapse=False, analysis_out_path=""):
+                 trackEachFrame=False, isTimelapse=False, perinuclearArea=False, analysis_out_path=""):
         self.imgs_path = bioformat_imgs_path
         self.nuc_recognition_mode = nuc_recognition_mode
         self.nuc_threshold = nuc_threshold
@@ -374,6 +374,7 @@ class Analyzer(object):
         self.trackMovement = trackMovement
         self.trackEachFrame = trackEachFrame
         self.isTimelapse = isTimelapse
+        self.perinuclearArea = perinuclearArea
         self.analysis_out_path = analysis_out_path
 
 
@@ -435,7 +436,7 @@ class Analyzer(object):
                     sys.exit()
 
                 channels_raw_data = reader.read_all_layers(t)
-                img_data = ImageData(filename, channels_raw_data, nuc_mask, self.nuc_area_min_pixels_num, t, self.isWatershed, self.trackMovement, features)
+                img_data = ImageData(filename, channels_raw_data, nuc_mask, self.nuc_area_min_pixels_num, t, self.isWatershed, self.trackMovement, features, self.perinuclearArea)
                 features = img_data.features
                 img_data.draw_and_save_cnts_for_channels(os.path.join(self.analysis_out_path, analysis_data_folders["cnts_verification"]),
                                                          self.nuc_area_min_pixels_num, self.mask_channel_name, t)
@@ -480,7 +481,14 @@ class Analyzer(object):
         _, gauss_nuc_8bit_binary = cv2.threshold(gauss_nuc_8bit_norm, self.nuc_threshold, 255, cv2.THRESH_BINARY)
 
         nuc_mask = gauss_nuc_8bit_binary
-        cv2.waitKey()
+
+        # all temporary code below - for testing dilation
+        # cv2.imshow("original nuc mask - thresholding", cv2.resize(nuc_mask, (750, 750)))
+        # kernel = np.ones((5, 5), np.uint8)
+        # img_dilation = cv2.dilate(nuc_mask, kernel, iterations=1)
+        # cv2.imshow("dilated nuc mask - thresholding", cv2.resize(img_dilation, (750, 750)))
+        # nuc_mask = img_dilation
+        # cv2.waitKey()
 
         return nuc_mask
 
@@ -500,21 +508,4 @@ class Analyzer(object):
                          self.unet_parm.unet_model_thrh)
         nuc_mask = stitch_mask(temp_folders["cut_mask"], self.unet_parm.unet_img_size, pieces_num)
 
-        # DEBUGGING - cv2.imshow("original nuc mask - unet", cv2.resize(nuc_mask, (750, 750)))
-
         return nuc_mask
-
-    # def _remove_small_particles(self, mask): TODO: Should we remove this? Seems like it's not used
-    #
-    #
-    #     mask = cv2.morphologyEx(mask.astype('uint8'), cv2.MORPH_OPEN, np.ones((5, 5)))
-    #     mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, np.ones((5, 5)))
-    #     clean_mask = np.zeros(mask.shape)
-    #     cnts = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)[0]
-    #
-    #     for cnt in cnts:
-    #         area = cv2.contourArea(cnt)
-    #         if area < self.nuc_area_min_pixels_num:
-    #             continue
-    #         cv2.fillPoly(clean_mask, pts=[cnt], color=(255, 255, 255))
-    #     return clean_mask.astype('uint8')

@@ -14,7 +14,7 @@ import bioformats
 
 def run_through_gui(analysis_type, bioformat_imgs_path,
                     nuc_recognition_mode, mask_channel_name,nuc_area_min_pixels_num,
-                    nuc_threshold, isWatershed, analysis_out_path):
+                    nuc_threshold, isWatershed, perinuclear_area, analysis_out_path):
 
     track_movement = True if analysis_type == 'tracing' else False
 
@@ -29,7 +29,7 @@ def run_through_gui(analysis_type, bioformat_imgs_path,
 
     start = time.time()
     analyser = Analyzer(bioformat_imgs_path, nuc_recognition_mode, nuc_threshold, unet_parm, nuc_area_min_pixels_num,
-                        mask_channel_name, isWatershed, track_movement, trackEachFrame=False, analysis_out_path=analysis_out_path)
+                        mask_channel_name, isWatershed, track_movement, trackEachFrame=False, perinuclearArea=perinuclear_area, analysis_out_path=analysis_out_path)
     analyser.run_analysis()
     end = time.time()
     print("Total time is: ")
@@ -95,6 +95,9 @@ def run_analysis():
     print(f"Watershed: {data_page.separating_cells.get()}")
     isWatershed = True if data_page.separating_cells.get() == "true" else False
 
+    print(f"Perinuclear area: {data_page.perinuclear_area.get()}")
+    perinuclear_area = True if data_page.perinuclear_area.get() == "true" else False
+
     print(f"Email receiver: {data_page.email.get()}")
     email_receiver = data_page.email.get()
 
@@ -116,7 +119,7 @@ def run_analysis():
             run_through_gui(analysis_type, bioformat_imgs_path,
                             nuc_recognition_mode, mask_channel_name,
                             int(nuc_area_min_pixels_num), nuc_threshold,
-                            isWatershed, output_folder)
+                            isWatershed, perinuclear_area, output_folder)
             #Send congrats e-mail
             # TODO: Where email is actually written
             subject = "MAL: Results are ready"
@@ -186,6 +189,7 @@ class DataCollectionPage:
         self.thr = tk.DoubleVar()
         self.min_nuc_area = tk.StringVar()
         self.separating_cells = tk.StringVar()
+        self.perinuclear_area = tk.StringVar()
 
         # configure the grid for data root label
         data_root.columnconfigure(0, weight=1)
@@ -287,10 +291,26 @@ class DataCollectionPage:
                                          offvalue='false')
         separate_check.grid(column=0, row=8, sticky=tk.W, padx=30, pady=15, columnspan=2)
 
+        perinuclear_check = ctk.CTkCheckBox(master=data_root,
+                                         text='Analyze perinuclear area',
+                                         variable=self.perinuclear_area,
+                                         onvalue='true',
+                                         offvalue='false')
+        perinuclear_check.grid(column=0, row=9, sticky=tk.W, padx=30, pady=15, columnspan=2)
+
         self.analize_button = ctk.CTkButton(
             master=data_root,
             text="Analyze")
         self.analize_button.grid(column=1, row=9, sticky=tk.E, padx=15, pady=30)
+
+        self.analize_button = ctk.CTkButton(
+            master=data_root,
+            text="Analyze")
+        self.analize_button.grid(column=1, row=9, sticky=tk.E, padx=15, pady=30)
+
+        #Analyze perinuclear area
+
+
 
     def slider_changed(self, event):
         self.value_label.configure(text='{: .0f}'.format(self.thr.get()))
