@@ -517,6 +517,12 @@ class Analyzer(object):
         :return:
         """
         does_cut_img = False
+        unet_model_path = self.unet_parm.unet_model_path_63x
+
+        if reader.magnification == "20.0":
+            does_cut_img = True
+            unet_model_path = self.unet_parm.unet_model_path_20x
+
         nuc_img_8bit_norm, nuc_file_name = reader.read_nucleus_layers(t=t)
         if does_cut_img:
 
@@ -524,7 +530,7 @@ class Analyzer(object):
                                    temp_folders["cut_8bit_img"])
 
             run_predict_unet(temp_folders["cut_8bit_img"], temp_folders["cut_mask"],
-                             self.unet_parm.unet_model_path,
+                             unet_model_path,
                              self.unet_parm.unet_model_scale,
                              self.unet_parm.unet_model_thrh)
             nuc_mask = stitch_mask(temp_folders["cut_mask"], self.unet_parm.unet_img_size, pieces_num)
@@ -534,7 +540,7 @@ class Analyzer(object):
             cv2.imwrite(img_path, nuc_img_8bit_norm)
 
             run_predict_unet(temp_folders["cut_8bit_img"], temp_folders["cut_mask"],
-                         self.unet_parm.unet_model_path,
+                         unet_model_path,
                          self.unet_parm.unet_model_scale,
                          self.unet_parm.unet_model_thrh)
             img_path = os.path.join(temp_folders["cut_mask"], base_img_name + '.png')

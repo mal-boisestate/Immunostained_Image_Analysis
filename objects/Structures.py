@@ -1,6 +1,7 @@
 class UnetParam(object):
-    def __init__(self, unet_model_path, unet_model_scale, unet_model_thrh, unet_img_size):
-        self.unet_model_path = unet_model_path
+    def __init__(self, unet_model_path_63x, unet_model_path_20x, unet_model_scale, unet_model_thrh, unet_img_size):
+        self.unet_model_path_63x = unet_model_path_63x
+        self.unet_model_path_20x = unet_model_path_20x
         self.unet_model_scale = unet_model_scale
         self.unet_model_thrh = unet_model_thrh
         self.unet_img_size = unet_img_size
