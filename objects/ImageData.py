@@ -32,6 +32,8 @@ class ImageData(object):
         self.signals_list = [] # list that will contain signal intensities for each time point
         self.overall_signals = self._analyze_signal_in_entire_frame() # analyzes signals across whole 2048 x 2048 img
         self.perinuclearArea = perinuclearArea # if user wants to include perinuclear area in analysis
+        self.externalSignal = self._analyze_signal_outside_nuclei(self.overall_signals, self.cells_data)
+        self.temp = 5
 
 
     def _get_nuc_cnts(self, isWatershed, nuc_area_min_pixels_num, t=0, trackMovement=False, features=None, perinuclearArea=False): # add last three to ImageData object!
@@ -129,16 +131,25 @@ class ImageData(object):
         return overall_signals
 
     # TODO
-    # def _analyze_signal_outside_nuclei(self):
-    #
-    #     external_signals_channels = []
-    #     
-    #     for signal.intensity for signal in self.signals
-    #         for i, cell in enumerate(self.cells_data):
-    #
-    #             nuclei_signals_sum
-    #
-    #     return None
+    def _analyze_signal_outside_nuclei(self, overall_signals, cells_data):
+
+        # Calculates the difference between total image signal and signal in nuclear regions
+
+        external_signals_channels = np.zeros((len(overall_signals)))
+        cells_data_sums = np.zeros((len(overall_signals))) # for calculating total stain per channel across all cells
+
+        for x in range(0, len(cells_data)):
+            for y in range(0, len(overall_signals)):
+
+                cells_data_sums[y] += cells_data[x].signals[y].intensity
+
+        for i in range(0, len(overall_signals)):
+            a = overall_signals[i].intensity
+            b = cells_data_sums[i]
+            external_signals_channels[i] = a - b
+
+        return external_signals_channels
+
 
     def draw_and_save_cnts_for_channels(self, output_folder, nuc_area_min_pixels_num, mask_img_name, t=0):
         base_img_name = os.path.splitext(os.path.basename(self.path))[0]

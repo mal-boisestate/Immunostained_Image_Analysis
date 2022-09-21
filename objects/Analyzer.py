@@ -134,25 +134,25 @@ def save_stat(imgs_data, isTimelapse, analysis_out_path):
                 csv_writer.writerow([None, None, None, None, None, None] +
                                  [None for signal in cell.signals])
 
-    #Save data for Chase
-    header_row = ["Image name", "Number of cells", "Total nucleus area"] + \
-                 ['Total intensity, ' + name for name in channels_names]
-
-    # 3. Write data
-    path = os.path.join(analysis_out_path, analysis_data_folders["analysis"], 'stat_for_Chase.csv')
-    with open(path, mode='w', newline='') as stat_file:
-        csv_writer = csv.writer(stat_file, delimiter=',')
-        csv_writer.writerow(header_row)
-        t = 0
-        for img_data in imgs_data:
-            cells_num = img_data[0].cells_num
-            total_nuc_area = 0
-            for cell in img_data[0].cells_data:
-                total_nuc_area += cell.area
-
-            csv_writer.writerow([img_data[0].path, str(cells_num), str(total_nuc_area)] +
-                                [np.sum(channel_intecity.img) for channel_intecity in img_data[0].channels_raw_data])
-
+    # #Save data for Chase
+    # header_row = ["Image name", "Number of cells", "Total nucleus area"] + \
+    #              ['Total intensity, ' + name for name in channels_names]
+    #
+    # # 3. Write data
+    # path = os.path.join(analysis_out_path, analysis_data_folders["analysis"], 'stat_for_Chase.csv')
+    # with open(path, mode='w', newline='') as stat_file:
+    #     csv_writer = csv.writer(stat_file, delimiter=',')
+    #     csv_writer.writerow(header_row)
+    #     t = 0
+    #     for img_data in imgs_data:
+    #         cells_num = img_data[0].cells_num
+    #         total_nuc_area = 0
+    #         for cell in img_data[0].cells_data:
+    #             total_nuc_area += cell.area
+    #
+    #         csv_writer.writerow([img_data[0].path, str(cells_num), str(total_nuc_area)] +
+    #                             [np.sum(channel_intecity.img) for channel_intecity in img_data[0].channels_raw_data])
+    #
 
     print("csv stat created")
 
@@ -195,23 +195,19 @@ def save_avg_stat(imgs_data, analysis_out_path):
 
         for img_data_t in imgs_data:
             for img_data in img_data_t:
-
-                sum_avg_signal_1 = 0
-                sum_avg_signal_2 = 0
-                sum_avg_signal_3 = 0
+                x = len(channels_names)
+                signal_sum_values = np.zeros(len(channels_names))
                 cells_total_area = 0
                 cell_num = 0
 
                 for i, cell in enumerate(img_data.cells_data):
-                    sum_avg_signal_1 += cell.signals[0].intensity / cell.area
-                    sum_avg_signal_2 += cell.signals[1].intensity / cell.area
-                    sum_avg_signal_3 += cell.signals[2].intensity / cell.area
+                    for j in range(0, len(channels_names)):
+                        signal_sum_values[j] += cell.signals[j].intensity / cell.area
                     cell_num += 1
 
-                csv_writer.writerow([t, img_data.path, cell_num, sum_avg_signal_1 / cell_num, sum_avg_signal_2 / cell_num,
-                                     sum_avg_signal_3 / cell_num])
+                csv_writer.writerow([t, img_data.path, cell_num] + [values / cell_num for values in signal_sum_values])
 
-                csv_writer.writerow([None, None, None, None, None, None])
+                csv_writer.writerow([None])
 
     print("csv avg stat created")
 
