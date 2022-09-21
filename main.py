@@ -12,7 +12,7 @@ def main():
     isWatershed = False # applies watershed to separate touching cells
     trackMovement = False # toggles cell movement tracking functionality
     trackEachFrame = False # will create and save a plot of cell movement for each
-    perinuclearArea = True # Option to slightly dilate area analyzed per cell, to accommodate perinuclear stain
+    perinuclearArea = False # Option to slightly dilate area analyzed per cell, to accommodate perinuclear stain
 
     # Failsafe conditional(s) if things are missed above
     if trackMovement is False:

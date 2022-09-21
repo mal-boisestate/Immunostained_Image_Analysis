@@ -30,6 +30,7 @@ class ImageData(object):
         self.time_point = time_point
         # self.features = self._get_features() TODO: We can add other characteristics such as intensity  and area and organize it im one function
         self.signals_list = [] # list that will contain signal intensities for each time point
+        self.overall_signals = self._analyze_signal_in_entire_frame() # analyzes signals across whole 2048 x 2048 img
         self.perinuclearArea = perinuclearArea # if user wants to include perinuclear area in analysis
 
 
@@ -113,6 +114,31 @@ class ImageData(object):
             nuclei_data.append(nucleus_data)
 
         return nuclei_data, len(nuclei_data)
+
+    def _analyze_signal_in_entire_frame(self):
+
+        # Analyzes signal for each channel across the entire 2048 x 2048 frame
+
+        overall_signals = []
+
+        for channel in self.channels_raw_data:
+            signal_sum = np.matrix.sum(np.asmatrix(channel.img))
+            signal = Signal(channel.name, signal_sum)
+            overall_signals.append(signal)
+
+        return overall_signals
+
+    # TODO
+    # def _analyze_signal_outside_nuclei(self):
+    #
+    #     external_signals_channels = []
+    #     
+    #     for signal.intensity for signal in self.signals
+    #         for i, cell in enumerate(self.cells_data):
+    #
+    #             nuclei_signals_sum
+    #
+    #     return None
 
     def draw_and_save_cnts_for_channels(self, output_folder, nuc_area_min_pixels_num, mask_img_name, t=0):
         base_img_name = os.path.splitext(os.path.basename(self.path))[0]
