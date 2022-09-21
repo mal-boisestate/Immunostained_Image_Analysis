@@ -36,7 +36,7 @@ class ImageData(object):
 
     def _get_nuc_cnts(self, isWatershed, nuc_area_min_pixels_num, t=0, trackMovement=False, features=None, perinuclearArea=False): # add last three to ImageData object!
         # features is the DataFrame object to which cell location data will be added
-        self.remove_edge_cells() #  Remove cells on the edge of image from the nucleus mask
+        # self.remove_edge_cells() #  Remove cells on the edge of image from the nucleus mask
         full_cnts = []
         cell_num = 1
 
