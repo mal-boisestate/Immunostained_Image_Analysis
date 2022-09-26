@@ -183,7 +183,8 @@ def save_avg_stat(imgs_data, analysis_out_path):
                 sys.exit()
 
     # 2.Create column names
-    header_row = ["Frame", "Image name", "Cell count"] + ['Stain intensity density, ' + name for name in channels_names]
+    header_row = ["Frame", "Image name", "Cell count"] + ['Stain intensity density, ' + name for name in channels_names]\
+                 + ["Total stain intensity, " + name for name in channels_names] + ["Non-nuclear stain intensity, " + name for name in channels_names]
 
     # 3. Write data
     path = os.path.join(analysis_out_path, analysis_data_folders["analysis"], 'signal_avg_stat.csv')
@@ -205,7 +206,8 @@ def save_avg_stat(imgs_data, analysis_out_path):
                         signal_sum_values[j] += cell.signals[j].intensity / cell.area
                     cell_num += 1
 
-                csv_writer.writerow([t, img_data.path, cell_num] + [values / cell_num for values in signal_sum_values])
+                csv_writer.writerow([t, img_data.path, cell_num] + [values / cell_num for values in signal_sum_values] +
+                                    [signal for signal in img_data.overall_signal] + [signal for signal in img_data.external_signal])
 
                 csv_writer.writerow([None])
 

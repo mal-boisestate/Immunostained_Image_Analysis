@@ -30,9 +30,9 @@ class ImageData(object):
         self.time_point = time_point
         # self.features = self._get_features() TODO: We can add other characteristics such as intensity  and area and organize it im one function
         self.signals_list = [] # list that will contain signal intensities for each time point
-        self.overall_signals = self._analyze_signal_in_entire_frame() # analyzes signals across whole 2048 x 2048 img
+        self.overall_signal = self._analyze_signal_in_entire_frame() # analyzes signals across whole 2048 x 2048 img
         self.perinuclearArea = perinuclearArea # if user wants to include perinuclear area in analysis
-        self.externalSignal = self._analyze_signal_outside_nuclei(self.overall_signals, self.cells_data)
+        self.external_signal = self._analyze_signal_outside_nuclei(self.overall_signal, self.cells_data) # signals outside nuclei
         self.temp = 5
 
 
@@ -121,14 +121,18 @@ class ImageData(object):
 
         # Analyzes signal for each channel across the entire 2048 x 2048 frame
 
-        overall_signals = []
+        overall_signal = []
+        overall_signal_num = []
 
         for channel in self.channels_raw_data:
             signal_sum = np.matrix.sum(np.asmatrix(channel.img))
             signal = Signal(channel.name, signal_sum)
-            overall_signals.append(signal)
+            overall_signal.append(signal)
 
-        return overall_signals
+        for i in range(0, len(overall_signal)):
+            overall_signal_num.append(overall_signal[i].intensity)
+
+        return overall_signal_num
 
     # TODO
     def _analyze_signal_outside_nuclei(self, overall_signals, cells_data):
@@ -144,7 +148,7 @@ class ImageData(object):
                 cells_data_sums[y] += cells_data[x].signals[y].intensity
 
         for i in range(0, len(overall_signals)):
-            a = overall_signals[i].intensity
+            a = overall_signals[i]
             b = cells_data_sums[i]
             external_signals_channels[i] = a - b
 
