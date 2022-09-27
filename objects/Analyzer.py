@@ -97,6 +97,7 @@ def prepare_folder(folder):
     for f in glob.glob(folder + "/*"):
         os.remove(f)
 
+
 def save_stat(imgs_data, isTimelapse, analysis_out_path):
     """
     Extract and save statistical data for an image or timelapse
@@ -114,7 +115,8 @@ def save_stat(imgs_data, isTimelapse, analysis_out_path):
 
     # 2.Create column names
     header_row = ["Frame", "Image name", "Cell id, #", "Cell center coordinates, (x, y)",
-                  "Nucleus area, pixels", "Nucleus perimeter, pixels"] + ['Total intensity, ' + name for name in channels_names] + \
+                  "Nucleus area, pixels", "Nucleus perimeter, pixels"] + ['Total intensity, ' + name for name in
+                                                                          channels_names] + \
                  ['Average intensity, ' + name for name in channels_names]
 
     # 3. Write data
@@ -126,13 +128,14 @@ def save_stat(imgs_data, isTimelapse, analysis_out_path):
         for img_data_t in imgs_data:
             for img_data in img_data_t:
                 for i, cell in enumerate(img_data.cells_data):
-                    csv_writer.writerow([t, img_data.path, str(i), str(cell.center), str(cell.area), str(cell.perimeter)] +
-                                        [signal.intensity for signal in cell.signals] +
-                                        [signal.intensity/cell.area for signal in cell.signals])
+                    csv_writer.writerow(
+                        [t, img_data.path, str(i), str(cell.center), str(cell.area), str(cell.perimeter)] +
+                        [signal.intensity for signal in cell.signals] +
+                        [signal.intensity / cell.area for signal in cell.signals])
                 if isTimelapse is True:
                     t += 1
                 csv_writer.writerow([None, None, None, None, None, None] +
-                                 [None for signal in cell.signals])
+                                    [None for signal in cell.signals])
 
     # #Save data for Chase
     # header_row = ["Image name", "Number of cells", "Total nucleus area"] + \
@@ -164,6 +167,7 @@ def save_stat(imgs_data, isTimelapse, analysis_out_path):
 
     os.remove(filepath_in)
 
+
 def save_avg_stat(imgs_data, analysis_out_path):
     """
         Extract and save average statistical data for images; Currently non-functional for timelapses
@@ -183,7 +187,7 @@ def save_avg_stat(imgs_data, analysis_out_path):
                 sys.exit()
 
     # 2.Create column names
-    header_row = ["Frame", "Image name", "Cell count"] + ['Stain intensity density, ' + name for name in channels_names]\
+    header_row = ["Frame", "Image name", "Cell count"] + ['Stain intensity density, ' + name for name in channels_names] \
                  + ["Total stain intensity, " + name for name in channels_names] + ["Non-nuclear stain intensity, " + name for name in channels_names]
 
     # 3. Write data
@@ -207,7 +211,8 @@ def save_avg_stat(imgs_data, analysis_out_path):
                     cell_num += 1
 
                 csv_writer.writerow([t, img_data.path, cell_num] + [values / cell_num for values in signal_sum_values] +
-                                    [signal for signal in img_data.overall_signal] + [signal for signal in img_data.external_signal])
+                                    [signal for signal in img_data.overall_signal] + [signal for signal in
+                                                                                      img_data.external_signal])
 
                 csv_writer.writerow([None])
 
@@ -235,7 +240,7 @@ def save_nuc_count_stat(imgs_data_t, save_graph, analysis_out_path):
 
     file_name = os.path.splitext(imgs_data_t[0].path)[0]
     header_row = ["Time point", "Time from experiment start, (min)", "Cell num"]
-    path = os.path.join(analysis_out_path, analysis_data_folders["nuclei_count"], file_name +'_time_point_stat.csv')
+    path = os.path.join(analysis_out_path, analysis_data_folders["nuclei_count"], file_name + '_time_point_stat.csv')
 
     nuc_count = []
     time_points = []
@@ -249,8 +254,8 @@ def save_nuc_count_stat(imgs_data_t, save_graph, analysis_out_path):
             nuc_count.append(n)
             t = img_data.time_point
             time_from_experiment_start = img_data.channels_raw_data[0].time_point
-            time_points.append(time_from_experiment_start//60)
-            csv_writer.writerow([str(t), str(time_from_experiment_start//60), str(n)])
+            time_points.append(time_from_experiment_start // 60)
+            csv_writer.writerow([str(t), str(time_from_experiment_start // 60), str(n)])
 
     if save_graph:
         # plotting the points
@@ -262,7 +267,8 @@ def save_nuc_count_stat(imgs_data_t, save_graph, analysis_out_path):
         # giving a title to my graph
         plt.title('Cell count over time')
         # function to save the plot
-        figure_path = os.path.join(analysis_out_path, analysis_data_folders["nuclei_count"], file_name + '_time_point_stat.png')
+        figure_path = os.path.join(analysis_out_path, analysis_data_folders["nuclei_count"],
+                                   file_name + '_time_point_stat.png')
         plt.savefig(figure_path)
 
     print(f"Stat for {file_name} is created")
@@ -279,9 +285,10 @@ def save_movement_stat(features, analysis_out_path):
     """
 
     features.to_excel(os.path.join(analysis_out_path, analysis_data_folders["movement_tracking"], "movement_stat.xlsx"),
-                        engine='xlsxwriter') # had to import xlsxwriter for this to work
+                      engine='xlsxwriter')  # had to import xlsxwriter for this to work
 
     print(f"Movement stat is created")
+
 
 def stitch_mask(input_folder, unet_img_size, num):
     """
@@ -312,7 +319,7 @@ def stitch_mask(input_folder, unet_img_size, num):
     return stitched_img
 
 
-def get_latest_image(dirpath, valid_extensions=('jpg','jpeg','png')):
+def get_latest_image(dirpath, valid_extensions=('jpg', 'jpeg', 'png')):
     """
     Get the last image file (alphabetically) in the given directory
 
@@ -329,7 +336,7 @@ def get_latest_image(dirpath, valid_extensions=('jpg','jpeg','png')):
     valid_files = [os.path.join(dirpath, filename) for filename in os.listdir(dirpath)]
     # filter out directories, no-extension, and wrong extension files
     valid_files = [f for f in valid_files if '.' in f and \
-        f.rsplit('.',1)[-1] in valid_extensions and os.path.isfile(f)]
+                   f.rsplit('.', 1)[-1] in valid_extensions and os.path.isfile(f)]
 
     if not valid_files:
         raise ValueError("No valid images in %s" % dirpath)
@@ -369,11 +376,12 @@ def plot_movement_trails(features, real_t, analysis_out_path):
 
     """
 
-    final_cnt_img = cv2.imread(get_latest_image(os.path.join(analysis_out_path, analysis_data_folders["cnts_verification"])))
+    final_cnt_img = cv2.imread(
+        get_latest_image(os.path.join(analysis_out_path, analysis_data_folders["cnts_verification"])))
 
     search_range = 100  # Adjustable
     trajectory = tp.link_df(features, search_range, memory=5)  # Memory is Adjustable
-    make_trajectory_fig(trajectory, final_cnt_img, real_t,analysis_out_path)
+    make_trajectory_fig(trajectory, final_cnt_img, real_t, analysis_out_path)
 
     # Window must be closed to keep the program running TODO: Make figure close automatically?
 
@@ -395,7 +403,6 @@ class Analyzer(object):
         self.perinuclearArea = perinuclearArea
         self.analysis_out_path = analysis_out_path
 
-
     def run_analysis(self):
         """
 
@@ -404,7 +411,6 @@ class Analyzer(object):
         """
 
         self.analyse_nuc_data()
-
 
     def analyse_nuc_data(self):
         """
@@ -453,10 +459,12 @@ class Analyzer(object):
                     sys.exit()
 
                 channels_raw_data = reader.read_all_layers(t)
-                img_data = ImageData(filename, channels_raw_data, nuc_mask, self.nuc_area_min_pixels_num, t, self.isWatershed, self.trackMovement, features, self.perinuclearArea)
+                img_data = ImageData(filename, channels_raw_data, nuc_mask, self.nuc_area_min_pixels_num, t,
+                                     self.isWatershed, self.trackMovement, features, self.perinuclearArea)
                 features = img_data.features
-                img_data.draw_and_save_cnts_for_channels(os.path.join(self.analysis_out_path, analysis_data_folders["cnts_verification"]),
-                                                         self.nuc_area_min_pixels_num, self.mask_channel_name, t)
+                img_data.draw_and_save_cnts_for_channels(
+                    os.path.join(self.analysis_out_path, analysis_data_folders["cnts_verification"]),
+                    self.nuc_area_min_pixels_num, self.mask_channel_name, t, self.perinuclearArea)
                 imgs_data_t.append(img_data)
 
                 # OPTIONAL debugging conditional - for plotting movement trails at every frame in a timelapse
@@ -475,7 +483,6 @@ class Analyzer(object):
             imgs_data.append(imgs_data_t)
         save_stat(imgs_data, self.isTimelapse, self.analysis_out_path)
         save_avg_stat(imgs_data, self.analysis_out_path)
-
 
     def find_mask_based_on_thr(self, reader, t=0):
         """
@@ -538,9 +545,9 @@ class Analyzer(object):
             cv2.imwrite(img_path, nuc_img_8bit_norm)
 
             run_predict_unet(temp_folders["cut_8bit_img"], temp_folders["cut_mask"],
-                         unet_model_path,
-                         self.unet_parm.unet_model_scale,
-                         self.unet_parm.unet_model_thrh)
+                             unet_model_path,
+                             self.unet_parm.unet_model_scale,
+                             self.unet_parm.unet_model_thrh)
             img_path = os.path.join(temp_folders["cut_mask"], base_img_name + '.png')
             nuc_mask = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
 

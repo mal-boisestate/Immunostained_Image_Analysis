@@ -19,12 +19,14 @@ def run_through_gui(analysis_type, bioformat_imgs_path,
     track_movement = True if analysis_type == 'tracing' else False
 
     unet_model = r"unet\models\CP_epoch198.pth"  # path to the trained Unet model if the user chooses nuc_recognition_mode = unet if not can be None
+    unet_model_63x = r"C:\BioLab2\Immunostained_Image_Analysis\unet\models\CP_epoch198.pth"
+    unet_model_20x = r"D:\BioLab\src_matlab_alternative\unet\models\CP_epoch65_only20x_no-aug.pth"
 
     # Unet training process characteristics:
     unet_model_scale = 1
     unet_img_size = (512, 512)
     unet_model_thrh = 0.5
-    unet_parm = UnetParam(unet_model, unet_model_scale, unet_model_thrh, unet_img_size)
+    unet_parm = UnetParam(unet_model_63x, unet_model_20x, unet_model_scale, unet_model_thrh, unet_img_size)
     javabridge.start_vm(class_path=bioformats.JARS)
 
     start = time.time()
