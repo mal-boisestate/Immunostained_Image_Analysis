@@ -293,6 +293,7 @@ class DataCollectionPage:
                                          offvalue='false')
         separate_check.grid(column=0, row=8, sticky=tk.W, padx=30, pady=15, columnspan=2)
 
+        # Analyze perinuclear area
         perinuclear_check = ctk.CTkCheckBox(master=data_root,
                                          text='Analyze perinuclear area',
                                          variable=self.perinuclear_area,

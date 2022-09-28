@@ -19,6 +19,9 @@ def main():
     if trackMovement is False:
         trackEachFrame = False
 
+    isTimelapse = False # necessary placeholder for analyzer constructor
+    analysis_out_path = "" # necessary placeholder for analyzer constructor
+
     # unet_model_63x = r"D:\BioLab\src_matlab_alternative\unet\models\CP_epoch198.pth" # path to the trained Unet model if the user chooses nuc_recognition_mode = unet if not can be None
     unet_model_63x = r"C:\BioLab2\Immunostained_Image_Analysis\unet\models\CP_epoch198.pth"
     unet_model_20x = r"D:\BioLab\src_matlab_alternative\unet\models\CP_epoch65_only20x_no-aug.pth"
@@ -32,9 +35,9 @@ def main():
     javabridge.start_vm(class_path=bioformats.JARS)
 
     start = time.time()
-    # TODO Fix the organization of variables - particularly for perinuclearArea
+
     analyser = Analyzer(bioformat_imgs_path, nuc_recognition_mode, nuc_threshold, unet_parm, nuc_area_min_pixels_num,
-                        mask_channel_name, isWatershed, trackMovement, trackEachFrame, perinuclearArea)
+                        mask_channel_name, isWatershed, trackMovement, trackEachFrame, isTimelapse, perinuclearArea, analysis_out_path)
     analyser.run_analysis()
     end = time.time()
     print("Total time is: ")

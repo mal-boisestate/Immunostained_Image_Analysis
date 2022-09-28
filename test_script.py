@@ -3,6 +3,8 @@ from objects.Structures import UnetParam
 from objects.Analyzer import Analyzer
 import javabridge
 import bioformats
+import pandas as pd
+import openpyxl
 
 # TODO: Construct this test script, decide what functionalities it should test, and determine what other components (
 #  unet model, imgs, etc.) are needed
@@ -46,14 +48,22 @@ import bioformats
 #       - Better way to do this?
 #   - Automatically run with each push to GitHub - Nina knows how to do this?
 
+# def data_accuracy_verification(analysis_out_path):
+
+
 def main():
-    bioformat_imgs_path = r"C:\BioLab\img\testing ground"
+
+    # Initializing relevant analysis variables
+
     nuc_recognition_mode = "unet"
     mask_channel_name = "DAPI"
     isWatershed = False
     trackMovement = False
     trackEachFrame = False
     perinuclearArea = False
+    isTimelapse = False  # necessary placeholder for analyzer constructor
+
+    # Initializing unet characteristics
 
     unet_model_63x = r"C:\BioLab2\Immunostained_Image_Analysis\unet\models\CP_epoch198.pth"
     unet_model_20x = r"D:\BioLab\src_matlab_alternative\unet\models\CP_epoch65_only20x_no-aug.pth"
@@ -65,15 +75,48 @@ def main():
     nuc_threshold = 120  # None by default
     javabridge.start_vm(class_path=bioformats.JARS)
 
+    # Initializing input and output folders
+
+    bioformat_imgs_path = r"C:\BioLab2\Immunostained_Image_Analysis\test_controls\test_imgs\60x"
+    analysis_out_path = r"C:\BioLab2\Immunostained_Image_Analysis\test_results\tests\test_1"
+    # TODO: Figure out how to make these folders reachable across devices (config?)
+
     start = time.time()
 
-    # First Test - All Toggles Off
+    print("1st Test - unet recognition, 63x imgs")
+
     analyser = Analyzer(bioformat_imgs_path, nuc_recognition_mode, nuc_threshold, unet_parm, nuc_area_min_pixels_num,
-                        mask_channel_name, isWatershed, trackMovement, trackEachFrame, perinuclearArea)
+                        mask_channel_name, isWatershed, trackMovement, trackEachFrame, isTimelapse, perinuclearArea,
+                        analysis_out_path)
     analyser.run_analysis()
     end = time.time()
-    print("Total time is: ")
+    print("Time for Test 1: ")
     print(end - start)
+
+    df1 = pd.read_excel(r'C:\BioLab2\Immunostained_Image_Analysis\test_controls\test_data\general_stats\signal_quant_xlsx.xlsx')
+    df2 = pd.read_excel(r'C:\BioLab2\Immunostained_Image_Analysis\analysis_data\general_stats\signal_quant_xlsx.xlsx')
+    # TODO: include pip install openpyxl as part of required installations?
+
+    difference = df1[df1 != df2]
+    print(difference)
+
+
+    time.sleep(10)
+
+
+    # print("2nd Test - thr recognition, 63x imgs")
+    #
+    # nuc_recognition_mode = "thr"
+    #
+    # analyser = Analyzer(bioformat_imgs_path, nuc_recognition_mode, nuc_threshold, unet_parm, nuc_area_min_pixels_num,
+    #                     mask_channel_name, isWatershed, trackMovement, trackEachFrame, isTimelapse, perinuclearArea,
+    #                     analysis_out_path)
+    # analyser.run_analysis()
+    # end = time.time()
+    # print("Time for Test 2: ")
+    # print(end - start)
+
+
     javabridge.kill_vm()
 
 

@@ -156,7 +156,7 @@ class ImageData(object):
         return external_signals_channels
 
 
-    def draw_and_save_cnts_for_channels(self, output_folder, nuc_area_min_pixels_num, mask_img_name, t=0, perinuclear_area=False):
+    def draw_and_save_cnts_for_channels(self, output_folder, nuc_area_min_pixels_num, mask_img_name, t=0, perinuclear_area=True):
         """
             Draws contours onto 8bit versions of cell imgs for visual verification. Also handles cell numbering.
             Contours are technically drawn on imgs of every channel, but only the designated nuclear channel is saved
@@ -182,6 +182,10 @@ class ImageData(object):
             img_path = os.path.join(output_folder, base_img_name + '_' + channel.name + '_t-' + str(t) + '.png')
             img_8bit = cv2.normalize(channel.img, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8UC1)
             cv2.drawContours(img_8bit, cnts, -1, (255, 255, 50), 3)
+            # if perinuclear_area is True:
+            #     cv2.drawContours(img_8bit, non_peri_cnts, -1, (255, 255, 50), 1)
+            # TODO: Determine which verification method is more desirable
+
             for i, cnt in enumerate(cnts):
                 org = Contour.get_cnt_center(cnt)
                 cv2.putText(img_8bit, str(i), org, fontFace=cv2.FONT_HERSHEY_PLAIN, fontScale=3, color=(255, 255, 0), thickness=3)
@@ -200,7 +204,7 @@ class ImageData(object):
         if perinuclear_area is True: # will produce an additional verification img without dilation
 
             for channel in self.channels_raw_data:
-                img_path = os.path.join(output_folder, base_img_name + '_non-perinuclear' + channel.name + '_t-' + str(t) + '.png')
+                img_path = os.path.join(output_folder, base_img_name + '_non_perinuclear_' + channel.name + '_t-' + str(t) + '.png')
                 img_8bit = cv2.normalize(channel.img, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX,
                                          dtype=cv2.CV_8UC1)
                 cv2.drawContours(img_8bit, non_peri_cnts, -1, (255, 255, 50), 3)
