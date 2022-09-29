@@ -175,6 +175,8 @@ def save_avg_stat(imgs_data, analysis_out_path):
         of nuclei, giving average stain quantity/nucleus.
 
         TODO: Make sure we're on the same page about "average". Stain/nucleus vs Stain density?
+        Currently found by summing the (total stain/nuclear area) of each cell in img, then dividing that total sum
+        by the number of cells, to get an average of the stain densities
 
         """
     # 1. Check that channel names for all images the same
