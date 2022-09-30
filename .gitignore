@@ -15,7 +15,6 @@ runs/
 analysis_data/
 temp/
 **/*.pickle
-**/*.pth
 **/*.jpg
 **/*.png
 **/*.html
