@@ -1,6 +1,9 @@
+import os
 import time
+import csv
 from objects.Structures import UnetParam
 from objects.Analyzer import Analyzer
+from objects.BioformatReader import BioformatReader
 import javabridge
 import bioformats
 import pandas as pd
@@ -51,47 +54,98 @@ import openpyxl
 # TESTS:
 # 1) unet, 63x img - confirms unet functionality for 63x
 # 2) thr, 63x img - confirms thr functionality
-# 3) unet, 20x img + model - confirms unet functionality for 20x unet model
-#   - if more unet models are added, will have to test them too
+# 3) unet, 63x img, perinuclear area - confirms perinuclear area functionality
 # 4) unet, 63x img, cell separation - confirms cell separation functionality
-# 5) unet, 63x img, perinuclear area - confirms perinuclear area functionality
-# 6) unet recognition, 63x 2-channel img - confirms functionality with different channel numbers
+# 6) unet, 20x img + model - confirms unet functionality for 20x unet model
+# 5) unet recognition, 63x 2-channel img - confirms functionality with different channel numbers
+#   - if more unet models are added, will have to test them too
 # 7) timelapse, unet - confirms timelapse analysis functionality
 # 8) timelapse, unet, track movement - confirms movement tracking functionality in timelapse
 
-def signal_quantification_test(df1, df2, test_num):
-    cell_count_control = df1.loc[:, "Cell id, #"]
-    cell_count_test = df2.loc[:, "Cell id, #"]
+def stats_difference_analysis(df1, df2):
+    """
+            Takes two DataFrame objects of equal size and with equal data types, and finds the percent difference
+            between the aggregated values of each.
+
+            """
+
+    difference = df1.subtract(df2)
+
+    percent = difference.divide(df1) * 100
+
+    percent_sum = percent.to_numpy().sum()
+    difference_size = difference.size
+    percent_difference = percent_sum / difference_size
+
+    return percent_difference
+
+def signal_quantification_test(df1, df2, test_num, channel_num):
+    pass_fail = None
+    avg_difference = 0
+    additional_notes = []
+
+    cell_count_control = df1.iloc[0, 2]
+    cell_count_test = df2.iloc[0, 2]
 
     # If the number of identified nuclei is equal, proceed with comparison. If not, can't do direct comparison
-    if cell_count_control.size != cell_count_test.size:
-        print("Analysis identified different numbers of nuclei in each img - direct comparison impossible")
-        print("Test " + str(test_num) + ": FAIL - direct comparison impossible")
+    if cell_count_control != cell_count_test:
+        notif = "Different numbers of nuclei identified in each img"
+        additional_notes.append(notif)
+        print(notif)
         print("")
     else:
-        signal_data_1 = df1.iloc[:, 4:11]
-        signal_data_2 = df2.iloc[:, 4:11]
-
-        difference = signal_data_1.subtract(signal_data_2)
-
-        percent_difference = difference.divide(signal_data_1) * 100
-
-        percent_difference_sum = percent_difference.to_numpy().sum()
-        percent_difference_size = percent_difference.size
-        avg_difference = percent_difference_sum / percent_difference_size
-
-        print("Test " + str(test_num) + " - unet recognition, 63x imgs")
-        print("Percent difference between control and test results for immunofluorescent signals:")
-        print(str(avg_difference) + " %")
+        print("Equal numbers of nuclei identified in each img")
         print("")
 
-        if abs(avg_difference) <= 5:  # Currently using a
-            print("Test " + str(test_num) + ": PASS - difference is less than 5%")
-        else:
-            print("Test " + str(test_num) + ": FAIL - difference is greater than 5%")
+    # TODO: Decide between cell-by-cell analaysis or avg analysis
+    # signal_data_1 = df1.iloc[:, 4:11]
+    # signal_data_2 = df2.iloc[:, 4:11]
 
-        print("Please wait...")
+    # For avg analysis - Compare the avg signal densities between the control and experimental imgs
+    avg_signal_1 = df1.iloc[0, 3:(channel_num + 3)]
+    avg_signal_2 = df2.iloc[0, 3:(channel_num + 3)]
 
+    # Find the percent difference in avg signal densities
+    avg_signal_difference = stats_difference_analysis(avg_signal_1, avg_signal_2)
+    avg_difference = avg_signal_difference
+
+    print("Percent difference between control and test results for immunofluorescent signal averages:")
+    print(str(avg_signal_difference) + " %")
+    print("")
+
+    if avg_signal_difference != 0:
+        print("Signal values aren't exactly the same")
+        print("")
+        additional_notes.append("Signal values aren't exactly the same")
+
+    if abs(avg_signal_difference) <= 5:  # Currently using a
+        print("Test " + str(test_num) + ": PASS - difference is less than 5%")
+        pass_fail = "PASS"
+    else:
+        print("Test " + str(test_num) + ": FAIL - difference is greater than 5%")
+        pass_fail = "FAIL"
+
+    print("")
+
+    # For debugging additional_notes
+    additional_notes.append("Notes Test 1")
+    additional_notes.append("Notes Test 2")
+
+    return pass_fail, avg_difference, additional_notes
+
+# TODO
+def save_test_summary(test_nums, test_outcomes, test_differences, summary_output_folder, analyzer_runtime, additional_notes):
+    header_row = ["Test #", "Result", "% Difference", "Analyzer Runtime", None, "Additional Notes"]
+
+    path = os.path.join(summary_output_folder, 'tests_summary.csv')
+    with open(path, mode='w', newline='') as stat_file:
+        csv_writer = csv.writer(stat_file, delimiter=',')
+        csv_writer.writerow(header_row)
+
+        for i in range(0, len(test_nums)):
+            csv_writer.writerow([test_nums[i], test_outcomes[i], test_differences[i], analyzer_runtime[i], None] + [note for note in additional_notes[i]])
+
+    print("csv test summary created")
 
 def main():
 
@@ -114,81 +168,168 @@ def main():
     unet_model_thrh = 0.5
     nuc_area_min_pixels_num = 200  # Minimum pixel size of contiguous ROIs to be labeled as "cells"
     unet_parm = UnetParam(unet_model_63x, unet_model_20x, unet_model_scale, unet_model_thrh, unet_img_size)
-    nuc_threshold = 120  # None by default
+    nuc_threshold = 50  # None by default
     javabridge.start_vm(class_path=bioformats.JARS)
 
     # Initializing input and output folders
 
-    # For Test 1
-    bioformat_imgs_path_60x = r"C:\BioLab2\Immunostained_Image_Analysis\test_controls\test_imgs\60x"
-    analysis_out_path_t1 = r"C:\BioLab2\Immunostained_Image_Analysis\test_results\tests\test_1"
+    # For test outcomes
 
+    summary_output_folder = r"C:\BioLab2\Immunostained_Image_Analysis\test_results\tests_summary"
+
+    # For Test 1
+    bioformat_imgs_path_63x = r"C:\BioLab2\Immunostained_Image_Analysis\test_controls\test_imgs\63x"
+    analysis_out_path_t1 = r"C:\BioLab2\Immunostained_Image_Analysis\test_results\tests\test_1"
     # For Test 2
     analysis_out_path_t2 = r"C:\BioLab2\Immunostained_Image_Analysis\test_results\tests\test_2"
+    # For Test 3
+    analysis_out_path_t3 = r"C:\BioLab2\Immunostained_Image_Analysis\test_results\tests\test_3"
 
     # TODO: Figure out how to make these folders reachable across devices (config?)
 
+    # Initializing universal variables for test outcomes and percent differences
+    test_counter = 1
+    test_nums = [] # array counting each test using test_counter
+    test_outcomes = [] # array containing the PASS/FAIL outcome for each test
+    test_differences = [] # array containing percent discrepencies, where relevant
+    analyzer_runtimes = [] # array containing runtimes for each test analyzer
+    additional_notes_main = [] # For any notes of interest and/or concenrs that may be worth looking at
+
+    # Starting the clock
     start = time.time()
 
-    # Setup for Test 1
-
+    # Analyzer Setup for Test 1
     print("")
-    print("1st Test - unet recognition, 63x imgs")
+    print("Running Test 1")
     print("Please wait...")
-    time.sleep(5)
+    print("")
 
-    analyser = Analyzer(bioformat_imgs_path_60x, nuc_recognition_mode, nuc_threshold, unet_parm, nuc_area_min_pixels_num,
-                        mask_channel_name, isWatershed, trackMovement, trackEachFrame, isTimelapse, perinuclearArea,
-                        analysis_out_path_t1)
-    analyser.run_analysis()
+    reader1 = BioformatReader(os.path.split(bioformat_imgs_path_63x)[0], 0,
+                              mask_channel_name)  # for channel num; fine for almost every test
+    analyser1 = Analyzer(bioformat_imgs_path_63x, nuc_recognition_mode, nuc_threshold, unet_parm,
+                         nuc_area_min_pixels_num,
+                         mask_channel_name, isWatershed, trackMovement, trackEachFrame, isTimelapse, perinuclearArea,
+                         analysis_out_path_t1)
+    analyser1.run_analysis()
     end = time.time()
+    analyzer_runtimes.append(end - start)
 
-    print("")
-    print("Time for Test 1: ")
-    print(end - start)
-    print("")
+    # print("Analysis time for Test 1: ")
+    # print(end - start)
+    # print("")
     time_temp = end
 
-    df1 = pd.read_excel(r'C:\BioLab2\Immunostained_Image_Analysis\test_controls\test_data\test_1\analysis_data\general_stats\signal_quant_xlsx.xlsx') # path to control excel file
-    df2 = pd.read_excel(r'C:\BioLab2\Immunostained_Image_Analysis\test_results\tests\test_1\analysis_data\general_stats\signal_quant_xlsx.xlsx') # path to tested excel file
-    # TODO: include pip install openpyxl as part of required installations?
-
-    # Run Test 1
-    signal_quantification_test(df1, df2, 1)
-
-    time.sleep(10)
-
-    # Setup for Test 2
-
+    # Analyzer Setup for Test 2
     print("")
-    print("2nd Test - thr recognition, 63x imgs")
+    print("Running Test 2")
     print("Please wait...")
-    time.sleep(5)
+    print("")
 
-    analyser2 = Analyzer(bioformat_imgs_path_60x, "thr", nuc_threshold, unet_parm,
-                        nuc_area_min_pixels_num,
-                        mask_channel_name, isWatershed, trackMovement, trackEachFrame, isTimelapse, perinuclearArea,
-                        analysis_out_path_t2)
+    analyser2 = Analyzer(bioformat_imgs_path_63x, "thr", nuc_threshold, unet_parm,
+                         nuc_area_min_pixels_num,
+                         mask_channel_name, isWatershed, trackMovement, trackEachFrame, isTimelapse, perinuclearArea,
+                         analysis_out_path_t2)
     analyser2.run_analysis()
     end = time.time()
+    analyzer_runtimes.append(end - time_temp)
 
-    print("")
-    print("Time for Test 2: ")
-    print(end - time_temp)
-    print("")
+    # print("")
+    # print("Analysis time for Test 2: ")
+    # print(end - time_temp)
+    # print("")
     time_temp = end
 
-    df1 = pd.read_excel(
-        r'C:\BioLab2\Immunostained_Image_Analysis\test_controls\test_data\test_1\analysis_data\general_stats\signal_quant_xlsx.xlsx')  # path to control excel file
-    df2 = pd.read_excel(
-        r'C:\BioLab2\Immunostained_Image_Analysis\test_results\tests\test_2\analysis_data\general_stats\signal_quant_xlsx.xlsx')
-    # TODO: Adjust df1 and df2 to refer to dynamic folders - look into os.path.join
+    # Analyzer Setup for Test 3
+    print("")
+    print("Running Test 3")
+    print("Please wait...")
+    print("")
+
+    analyser3 = Analyzer(bioformat_imgs_path_63x, "unet", nuc_threshold, unet_parm,
+                         nuc_area_min_pixels_num,
+                         mask_channel_name, isWatershed, trackMovement, trackEachFrame, isTimelapse, True,
+                         analysis_out_path_t3)
+    analyser3.run_analysis()
+    end = time.time()
+    analyzer_runtimes.append(end - time_temp)
+
+    # print("")
+    # print("Analysis time for Test 2: ")
+    # print(end - time_temp)
+    # print("")
+    time_temp = end
+
+    # TEST ANALYSES
+
+    print("")
+    print("TEST RESULTS:")
+    print("")
+
+    # Run Test 1
+    print("----------------------------------------------------------------------------------------------------------")
+    print("TEST 1 - unet, 63x img")
+    print("----------------------------------------------------------------------------------------------------------")
+    print("")
+
+    df1 = pd.read_excel(r'C:\BioLab2\Immunostained_Image_Analysis\test_controls\test_data\test_1\analysis_data\general_stats\signal_avg_xlsx.xlsx') # path to control excel file
+    df2 = pd.read_excel(r'C:\BioLab2\Immunostained_Image_Analysis\test_results\tests\test_1\analysis_data\general_stats\signal_avg_xlsx.xlsx') # path to tested excel file
+    # TODO: include pip install openpyxl as part of required installations?
+
+    pass_fail, avg_difference, additional_notes = signal_quantification_test(df1, df2, test_counter, reader1.channel_nums)
+
+    test_nums.append(test_counter)
+    test_counter += 1
+    test_outcomes.append(pass_fail)
+    test_differences.append(avg_difference)
+    additional_notes_main.append(additional_notes)
 
     # Run Test 2
-    signal_quantification_test(df1, df2, 2)
+    print("----------------------------------------------------------------------------------------------------------")
+    print("TEST 2 - thr, 63x img")
+    print("----------------------------------------------------------------------------------------------------------")
+    print("")
 
-    time.sleep(10)
+    df1 = pd.read_excel(
+        r'C:\BioLab2\Immunostained_Image_Analysis\test_controls\test_data\test_2\analysis_data\general_stats\signal_avg_xlsx.xlsx')  # path to control excel file
+    df2 = pd.read_excel(
+        r'C:\BioLab2\Immunostained_Image_Analysis\test_results\tests\test_2\analysis_data\general_stats\signal_avg_xlsx.xlsx') # path to tested excel file
+    # TODO: Adjust df1 and df2 to refer to dynamic folders - look into os.path.join or config?
 
+    pass_fail, avg_difference, additional_notes = signal_quantification_test(df1, df2, test_counter, reader1.channel_nums)
+
+    test_nums.append(test_counter)
+    test_counter += 1
+    test_outcomes.append(pass_fail)
+    test_differences.append(avg_difference)
+    additional_notes_main.append(additional_notes)
+
+    # Run Test 3
+    print("----------------------------------------------------------------------------------------------------------")
+    print("TEST 3 - unet, 63x img, perinuclear area analysis")
+    print("----------------------------------------------------------------------------------------------------------")
+    print("")
+
+    df1 = pd.read_excel(
+        r'C:\BioLab2\Immunostained_Image_Analysis\test_controls\test_data\test_3\analysis_data\general_stats\signal_avg_xlsx.xlsx')  # path to control excel file
+    df2 = pd.read_excel(
+        r'C:\BioLab2\Immunostained_Image_Analysis\test_results\tests\test_3\analysis_data\general_stats\signal_avg_xlsx.xlsx')  # path to tested excel file
+
+    pass_fail, avg_difference, additional_notes = signal_quantification_test(df1, df2, test_counter,
+                                                                             reader1.channel_nums)
+
+    test_nums.append(test_counter)
+    test_counter += 1
+    test_outcomes.append(pass_fail)
+    test_differences.append(avg_difference)
+    additional_notes_main.append(additional_notes)
+
+    # Create test summary csv compiling general test results
+    save_test_summary(test_nums, test_outcomes, test_differences, summary_output_folder, analyzer_runtimes, additional_notes_main)
+
+    print("----------------------------------------------------------------------------------------------------------")
+    print("TESTING COMPLETE")
+    print("----------------------------------------------------------------------------------------------------------")
+    print("")
 
     javabridge.kill_vm()
 

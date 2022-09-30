@@ -115,9 +115,9 @@ def save_stat(imgs_data, isTimelapse, analysis_out_path):
 
     # 2.Create column names
     header_row = ["Frame", "Image name", "Cell id, #", "Cell center coordinates, (x, y)",
-                  "Nucleus area, pixels", "Nucleus perimeter, pixels"] + ['Total intensity, ' + name for name in
+                  "Nucleus area, pixels", "Nucleus perimeter, pixels"] + ['Total signal intensity, ' + name for name in
                                                                           channels_names] + \
-                 ['Average intensity, ' + name for name in channels_names]
+                 ['Signal density, ' + name for name in channels_names]
 
     # 3. Write data
     path = os.path.join(analysis_out_path, analysis_data_folders["analysis"], 'signal_quant_stat.csv')
@@ -189,8 +189,8 @@ def save_avg_stat(imgs_data, analysis_out_path):
                 sys.exit()
 
     # 2.Create column names
-    header_row = ["Frame", "Image name", "Cell count"] + ['Stain intensity density, ' + name for name in channels_names] \
-                 + ["Total stain intensity, " + name for name in channels_names] + ["Non-nuclear stain intensity, " + name for name in channels_names]
+    header_row = ["Frame", "Image name", "Cell count"] + ['Average signal density, ' + name for name in channels_names] \
+                 + ["Total signal in img, " + name for name in channels_names] + ["Non-nuclear signal in img, " + name for name in channels_names]
 
     # 3. Write data
     path = os.path.join(analysis_out_path, analysis_data_folders["analysis"], 'signal_avg_stat.csv')
@@ -483,6 +483,7 @@ class Analyzer(object):
                 save_movement_stat(features, self.analysis_out_path)
 
             imgs_data.append(imgs_data_t)
+
         save_stat(imgs_data, self.isTimelapse, self.analysis_out_path)
         save_avg_stat(imgs_data, self.analysis_out_path)
 

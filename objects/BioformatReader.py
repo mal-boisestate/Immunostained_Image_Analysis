@@ -14,7 +14,7 @@ class BioformatReader(object):
     def __init__(self, path, img_number, mask_channel_name):
         """
             Parameters:
-            img_path (string): path to the file to read
+            img_path (string): path to the folder (not a specific img file) to read
             nucleus_channel(int): channel of nucleus images at the provided microscopic image
             actin_channel(int): channel of actin images at the provided microscopic image
         """
