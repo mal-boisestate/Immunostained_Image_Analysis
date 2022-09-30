@@ -28,7 +28,7 @@ class BioformatReader(object):
         self.depth = self.metadata_obj.image(self.series).Pixels.PixelType # Where depth (8 bit, etc.) is identified?
                                                                            # What does this actually return?
         self.t_num = self.metadata_obj.image(self.series).Pixels.SizeT
-        self.magnification = self.metadata_obj.instrument(self.series).Objective.NominalMagnification
+        self.magnification = self.metadata_obj.instrument(self.series).Objective.NominalMagnification #"63.0" for 63x, "20.0" for 20x
 
 
     def find_channels(self):

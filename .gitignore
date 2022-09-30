@@ -6,7 +6,6 @@ analysis_data/
 temp/
 runs/
 .idea/
-*.pth
 *.pickle
 *.csv
 *.jpg

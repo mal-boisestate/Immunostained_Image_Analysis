@@ -18,13 +18,13 @@ def run_through_gui(analysis_type, bioformat_imgs_path,
 
     track_movement = True if analysis_type == 'tracing' else False
 
-    unet_model = r"unet\models\CP_epoch198.pth"  # path to the trained Unet model if the user chooses nuc_recognition_mode = unet if not can be None
-
+    unet_model_path_63x = r"unet\models\CP_epoch198.pth"
+    unet_model_path_20x = r"unet\models\CP_epoch65_only20x_no-aug.pth"
     # Unet training process characteristics:
     unet_model_scale = 1
     unet_img_size = (512, 512)
     unet_model_thrh = 0.5
-    unet_parm = UnetParam(unet_model, unet_model_scale, unet_model_thrh, unet_img_size)
+    unet_parm = UnetParam(unet_model_path_63x, unet_model_path_20x, unet_model_scale, unet_model_thrh, unet_img_size)
     javabridge.start_vm(class_path=bioformats.JARS)
 
     start = time.time()
@@ -225,7 +225,7 @@ class DataCollectionPage:
 
         # channel mask
         ctk.CTkLabel(master=data_root, text='Nuclear Mask', anchor='w').grid(column=0, row=4, sticky=tk.W, padx=15, pady=15)
-        mask_combobox = ctk.CTkComboBox(master=data_root, values=["DAPI", "Option2", "Option3"], variable=self.mask_channel)
+        mask_combobox = ctk.CTkComboBox(master=data_root, values=["DAPI", "AF350", "Option3"], variable=self.mask_channel)
         mask_combobox['values'] = ["DAPI", "AF350", "Option3"]
         # prevent typing a value
         mask_combobox['state'] = 'readonly'

@@ -6,10 +6,10 @@ import bioformats
 
 
 def main():
-    # bioformat_imgs_path = r"D:\BioLab\img\Chase_img\63x\Replicate 1 (3-19-22)-20220908T033855Z-001\Replicate 1 (3-19-22)\6X LIV"  # path to the folder that contains bio format images (czi, lif, ect) or path to the specific image
-    bioformat_imgs_path = r"C:\BioLab\img\testing ground"
+    bioformat_imgs_path = r"D:\BioLab\img\Chase_img\63x\Replicate 1 (3-19-22)-20220908T033855Z-001\Replicate 1 (3-19-22)\6X LIV"  # path to the folder that contains bio format images (czi, lif, ect) or path to the specific image
+    # bioformat_imgs_path = r"C:\BioLab\img\testing ground"
     nuc_recognition_mode = "unet"  # "unet" or "thr"
-    mask_channel_name = "DAPI"
+    mask_channel_name = "AF350"
     isWatershed = False # applies watershed to separate touching cells
     trackMovement = False # toggles cell movement tracking functionality
     trackEachFrame = False # will create and save a plot of cell movement for each
@@ -19,9 +19,9 @@ def main():
     if trackMovement is False:
         trackEachFrame = False
 
-    # unet_model_63x = r"D:\BioLab\src_matlab_alternative\unet\models\CP_epoch198.pth" # path to the trained Unet model if the user chooses nuc_recognition_mode = unet if not can be None
-    unet_model_63x = r"C:\BioLab2\Immunostained_Image_Analysis\unet\models\CP_epoch198.pth"
-    unet_model_20x = r"D:\BioLab\src_matlab_alternative\unet\models\CP_epoch65_only20x_no-aug.pth"
+    unet_model_63x = r"unet\models\CP_epoch198.pth" # path to the trained Unet model if the user chooses nuc_recognition_mode = unet if not can be None
+    # unet_model_63x = r"C:\BioLab2\Immunostained_Image_Analysis\unet\models\CP_epoch198.pth"
+    unet_model_20x = r"unet\models\CP_epoch65_only20x_no-aug.pth"
     # Unet training process characteristics:
     unet_model_scale = 1
     unet_img_size = (512, 512)
