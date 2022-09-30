@@ -8,7 +8,7 @@ import bioformats
 def main():
     bioformat_imgs_path = r"D:\BioLab\img\Chase_img\63x\Replicate 1 (3-19-22)-20220908T033855Z-001\Replicate 1 (3-19-22)\6X LIV"  # path to the folder that contains bio format images (czi, lif, ect) or path to the specific image
     # bioformat_imgs_path = r"C:\BioLab\img\testing ground"
-    nuc_recognition_mode = "unet"  # "unet" or "thr"
+    nuc_recognition_mode = "thr"  # "unet" or "thr"
     mask_channel_name = "AF350"
     isWatershed = False # applies watershed to separate touching cells
     trackMovement = False # toggles cell movement tracking functionality
@@ -28,13 +28,13 @@ def main():
     unet_model_thrh = 0.5
     nuc_area_min_pixels_num = 200 # Minimum pixel size of contiguous ROIs to be labeled as "cells"
     unet_parm = UnetParam(unet_model_63x, unet_model_20x, unet_model_scale, unet_model_thrh, unet_img_size)
-    nuc_threshold = 120 # None by default
+    nuc_threshold = 50 # None by default
     javabridge.start_vm(class_path=bioformats.JARS)
 
     start = time.time()
-    # TODO Fix the organization of variables - particularly for perinuclearArea
+
     analyser = Analyzer(bioformat_imgs_path, nuc_recognition_mode, nuc_threshold, unet_parm, nuc_area_min_pixels_num,
-                        mask_channel_name, isWatershed, trackMovement, trackEachFrame, perinuclearArea)
+                        mask_channel_name, isWatershed, trackMovement, trackEachFrame, isTimelapse, perinuclearArea, analysis_out_path)
     analyser.run_analysis()
     end = time.time()
     print("Total time is: ")

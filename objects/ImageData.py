@@ -26,13 +26,14 @@ class ImageData(object):
         self.channels_raw_data = channels_raw_data
         self.nuc_mask = run_erosion_dialation(nuc_mask) #helps to remove
         self.cnts, self.features = self._get_nuc_cnts(isWatershed, nuc_area_min_pixels_num, time_point, trackMovement, features, perinuclearArea)
+        self.original_cnts, _ = self._get_nuc_cnts(isWatershed, nuc_area_min_pixels_num, time_point, trackMovement, features, False) # always finds cnts without perinuclear area
         self.cells_data, self.cells_num = self._analyse_signal_in_nuc_area(nuc_area_min_pixels_num)
         self.time_point = time_point
         # self.features = self._get_features() TODO: We can add other characteristics such as intensity  and area and organize it im one function
         self.signals_list = [] # list that will contain signal intensities for each time point
-        self.overall_signals = self._analyze_signal_in_entire_frame() # analyzes signals across whole 2048 x 2048 img
+        self.overall_signal = self._analyze_signal_in_entire_frame() # analyzes signals across whole 2048 x 2048 img
         self.perinuclearArea = perinuclearArea # if user wants to include perinuclear area in analysis
-        self.externalSignal = self._analyze_signal_outside_nuclei(self.overall_signals, self.cells_data)
+        self.external_signal = self._analyze_signal_outside_nuclei(self.overall_signal, self.cells_data) # signals outside nuclei
         self.temp = 5
 
 
@@ -121,14 +122,18 @@ class ImageData(object):
 
         # Analyzes signal for each channel across the entire 2048 x 2048 frame
 
-        overall_signals = []
+        overall_signal = []
+        overall_signal_num = []
 
         for channel in self.channels_raw_data:
             signal_sum = np.matrix.sum(np.asmatrix(channel.img))
             signal = Signal(channel.name, signal_sum)
-            overall_signals.append(signal)
+            overall_signal.append(signal)
 
-        return overall_signals
+        for i in range(0, len(overall_signal)):
+            overall_signal_num.append(overall_signal[i].intensity)
+
+        return overall_signal_num
 
     # TODO
     def _analyze_signal_outside_nuclei(self, overall_signals, cells_data):
@@ -144,35 +149,73 @@ class ImageData(object):
                 cells_data_sums[y] += cells_data[x].signals[y].intensity
 
         for i in range(0, len(overall_signals)):
-            a = overall_signals[i].intensity
+            a = overall_signals[i]
             b = cells_data_sums[i]
             external_signals_channels[i] = a - b
 
         return external_signals_channels
 
 
-    def draw_and_save_cnts_for_channels(self, output_folder, nuc_area_min_pixels_num, mask_img_name, t=0):
+    def draw_and_save_cnts_for_channels(self, output_folder, nuc_area_min_pixels_num, mask_img_name, t=0, perinuclear_area=True):
+        """
+            Draws contours onto 8bit versions of cell imgs for visual verification. Also handles cell numbering.
+            Contours are technically drawn on imgs of every channel, but only the designated nuclear channel is saved
+            to the verification img folder.
+
+            Args:
+                output_folder: str of the shorthand directory where verification imgs are saved
+                nuc_area_min_pixels_num: int of the minimum acceptable nuclear cell size
+                                         designated in the main/gui by the user
+                mask_img_name: str of the name of the nuclear stain designated in the main/gui by the user
+                t: int representing the frame of the provided img. Relevant to timelapses; will be 0 for still imgs
+                perinuclear_area: boolean; if true, user wants to analyze perinuclear area
+                original_contours
+
+            """
+
         base_img_name = os.path.splitext(os.path.basename(self.path))[0]
-        cnts = [cnt for cnt in self.cnts if cv2.contourArea(cnt) > nuc_area_min_pixels_num]
+        cnts = [cnt for cnt in self.cnts if cv2.contourArea(cnt) > nuc_area_min_pixels_num] # removes noise
+        non_peri_cnts = [cnt for cnt in self.original_cnts if cv2.contourArea(cnt) > nuc_area_min_pixels_num]
         merged_img = []
 
         for channel in self.channels_raw_data:
             img_path = os.path.join(output_folder, base_img_name + '_' + channel.name + '_t-' + str(t) + '.png')
             img_8bit = cv2.normalize(channel.img, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8UC1)
             cv2.drawContours(img_8bit, cnts, -1, (255, 255, 50), 3)
+            # if perinuclear_area is True:
+            #     cv2.drawContours(img_8bit, non_peri_cnts, -1, (255, 255, 50), 1)
+            # TODO: Determine which verification method is more desirable
+
             for i, cnt in enumerate(cnts):
                 org = Contour.get_cnt_center(cnt)
                 cv2.putText(img_8bit, str(i), org, fontFace=cv2.FONT_HERSHEY_PLAIN, fontScale=3, color=(255, 255, 0), thickness=3)
+                # Cell numbering?
 
             if channel.name == mask_img_name:
                 cv2.imwrite(img_path, img_8bit)
             merged_img.append(img_8bit)
 
-        if len(merged_img) == 3:
+        if len(merged_img) == 3: # creates a colored version of the contour img if there are exactly 3 channels
             color_img_path = os.path.join(output_folder,
                                     base_img_name + '_color' + '_t-' + str(t) +'.png')
             color_img = cv2.merge(merged_img)
             cv2.imwrite(color_img_path, color_img)
+
+        if perinuclear_area is True: # will produce an additional verification img without dilation
+
+            for channel in self.channels_raw_data:
+                img_path = os.path.join(output_folder, base_img_name + '_non_perinuclear_' + channel.name + '_t-' + str(t) + '.png')
+                img_8bit = cv2.normalize(channel.img, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX,
+                                         dtype=cv2.CV_8UC1)
+                cv2.drawContours(img_8bit, non_peri_cnts, -1, (255, 255, 50), 3)
+                for i, cnt in enumerate(non_peri_cnts):
+                    org = Contour.get_cnt_center(cnt)
+                    cv2.putText(img_8bit, str(i), org, fontFace=cv2.FONT_HERSHEY_PLAIN, fontScale=3,
+                                color=(255, 255, 0), thickness=3)
+                    # Cell numbering?
+
+                if channel.name == mask_img_name:
+                    cv2.imwrite(img_path, img_8bit)
 
     def find_nuc_locations(self, nuc_mask, features, need_increment, t=0, cell_num=1, trackMovement=False, output_folder=None):
 
