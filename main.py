@@ -22,6 +22,8 @@ def main():
     unet_model_63x = r"unet\models\CP_epoch198.pth" # path to the trained Unet model if the user chooses nuc_recognition_mode = unet if not can be None
     # unet_model_63x = r"C:\BioLab2\Immunostained_Image_Analysis\unet\models\CP_epoch198.pth"
     unet_model_20x = r"unet\models\CP_epoch65_only20x_no-aug.pth"
+    # unet_model_20x = r"unet\models\CP_epoch169.pth"
+
     # Unet training process characteristics:
     unet_model_scale = 1
     unet_img_size = (512, 512)
