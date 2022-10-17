@@ -26,6 +26,17 @@ analysis_data_folders = {
     "movement_tracking": 'analysis_data/movement_tracking'
 }
 
+def remove_padding(img, final_img_size):
+    h, w = img.shape[:2]
+    h_out, w_out = final_img_size
+
+    top = (h - h_out) // 2
+    bottom = h_out + top
+    left = (w - w_out) // 2
+    right = w_out + left
+    return img[top:bottom, left:right]
+
+
 
 def make_padding(img, final_img_size):
     """
@@ -36,13 +47,13 @@ def make_padding(img, final_img_size):
     """
     h, w = img.shape[:2]
     h_out, w_out = final_img_size
-
     top = (h_out - h) // 2
     bottom = h_out - h - top
     left = (w_out - w) // 2
     right = w_out - w - left
 
     padded_img = cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=0)
+
     return padded_img
 
 
@@ -407,11 +418,8 @@ class Analyzer(object):
 
     def run_analysis(self):
         """
-
         Runs the analysis script
-
         """
-
         self.analyse_nuc_data()
 
     def analyse_nuc_data(self):
@@ -524,24 +532,37 @@ class Analyzer(object):
         :param reader:
         :return:
         """
+        piece_dim = (2048, 2048)
         does_cut_img = False
         unet_model_path = self.unet_parm.unet_model_path_63x
+        nuc_img_8bit_norm, nuc_file_name = reader.read_nucleus_layers(t=t)
+
+        if nuc_img_8bit_norm.shape[0] > 2048: #if image is stiched then cut it into a pieces
+            does_cut_img = True
 
         if reader.magnification == "20.0":
             does_cut_img = True
+            piece_dim = self.unet_parm.unet_img_size
             unet_model_path = self.unet_parm.unet_model_path_20x
 
-        nuc_img_8bit_norm, nuc_file_name = reader.read_nucleus_layers(t=t)
+        if reader.magnification == "40.0":
+            unet_model_path = self.unet_parm.unet_model_path_63x0x #we need to train model that works with 40x
+
         if does_cut_img:
 
-            pieces_num = cut_image(nuc_img_8bit_norm, nuc_file_name, self.unet_parm.unet_img_size,
+            pieces_num = cut_image(nuc_img_8bit_norm, nuc_file_name, piece_dim,
                                    temp_folders["cut_8bit_img"])
 
             run_predict_unet(temp_folders["cut_8bit_img"], temp_folders["cut_mask"],
                              unet_model_path,
                              self.unet_parm.unet_model_scale,
                              self.unet_parm.unet_model_thrh)
-            nuc_mask = stitch_mask(temp_folders["cut_mask"], self.unet_parm.unet_img_size, pieces_num)
+            nuc_mask = stitch_mask(temp_folders["cut_mask"], piece_dim, pieces_num)
+
+            a = 1
+
+            if nuc_img_8bit_norm.shape[0] != nuc_mask.shape[0] or nuc_img_8bit_norm.shape[1] != nuc_mask.shape[1]:
+                nuc_mask = remove_padding(nuc_mask, nuc_img_8bit_norm.shape)
         else:
             base_img_name = os.path.splitext(os.path.basename(nuc_file_name))[0]
             img_path = os.path.join(temp_folders["cut_8bit_img"], base_img_name + '.png')
