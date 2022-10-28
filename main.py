@@ -6,15 +6,15 @@ import bioformats
 
 
 def main():
-    bioformat_imgs_path = r"D:\BioLab\img\Chase_img\63x\Replicate 1 (3-19-22)-20220908T033855Z-001\Replicate 1 (3-19-22)\6X LIV"  # path to the folder that contains bio format images (czi, lif, ect) or path to the specific image
+    bioformat_imgs_path = r"D:\BioLab\img\Chase_img\40x_stiched\Replicate 1 (9-16-22)\6xLIV"  # path to the folder that contains bio format images (czi, lif, ect) or path to the specific image
     # bioformat_imgs_path = r"C:\BioLab\img\testing ground"
-    nuc_recognition_mode = "thr"  # "unet" or "thr"
-    mask_channel_name = "AF350"
+    nuc_recognition_mode = "unet"  # "unet" or "thr"
+    mask_channel_name = "DAPI"
     isWatershed = False # applies watershed to separate touching cells
     trackMovement = False # toggles cell movement tracking functionality
     trackEachFrame = False # will create and save a plot of cell movement for each
     perinuclearArea = False # Option to slightly dilate area analyzed per cell, to accommodate perinuclear stain
-
+    isTimelapse = False
     # Failsafe conditional(s) if things are missed above
     if trackMovement is False:
         trackEachFrame = False
@@ -36,7 +36,7 @@ def main():
     start = time.time()
 
     analyser = Analyzer(bioformat_imgs_path, nuc_recognition_mode, nuc_threshold, unet_parm, nuc_area_min_pixels_num,
-                        mask_channel_name, isWatershed, trackMovement, trackEachFrame, isTimelapse, perinuclearArea, analysis_out_path)
+                        mask_channel_name, isWatershed, trackMovement, trackEachFrame, isTimelapse, perinuclearArea)
     analyser.run_analysis()
     end = time.time()
     print("Total time is: ")

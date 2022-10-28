@@ -67,17 +67,21 @@ def stats_difference_analysis(df1, df2):
             Takes two DataFrame objects of equal size and with equal data types, and finds the percent difference
             between the aggregated values of each.
 
+            df1: first DataFrame; should be the control
+            df2: second DataFrame; should be from program analysis
+
             """
 
     difference = df1.subtract(df2)
 
-    percent = difference.divide(df1) * 100
+    percent_matrix = difference.divide(df1) * 100
 
-    percent_sum = percent.to_numpy().sum()
+
+    percent_sum = percent_matrix.to_numpy().sum()
     difference_size = difference.size
     percent_difference = percent_sum / difference_size
 
-    return percent_difference
+    return percent_difference, percent_matrix, difference
 
 def signal_quantification_test(df1, df2, test_num, channel_num):
     pass_fail = None
@@ -97,19 +101,21 @@ def signal_quantification_test(df1, df2, test_num, channel_num):
         print("Equal numbers of nuclei identified in each img")
         print("")
 
-    # TODO: Decide between cell-by-cell analaysis or avg analysis
-    # signal_data_1 = df1.iloc[:, 4:11]
-    # signal_data_2 = df2.iloc[:, 4:11]
-
     # For avg analysis - Compare the avg signal densities between the control and experimental imgs
     avg_signal_1 = df1.iloc[0, 3:(channel_num + 3)]
     avg_signal_2 = df2.iloc[0, 3:(channel_num + 3)]
 
     # Find the percent difference in avg signal densities
-    avg_signal_difference = stats_difference_analysis(avg_signal_1, avg_signal_2)
+    avg_signal_difference, signal_difference_matrix, difference = stats_difference_analysis(avg_signal_1, avg_signal_2)
     avg_difference = avg_signal_difference
 
-    print("Percent difference between control and test results for immunofluorescent signal averages:")
+    # TODO: See if I can print DataFrame of differences
+    print("Percent difference between control and test results for each channel:")
+    print("")
+    print(signal_difference_matrix)
+
+    print("")
+    print("Combined percent difference between control and test results:")
     print(str(avg_signal_difference) + " %")
     print("")
 
@@ -118,11 +124,11 @@ def signal_quantification_test(df1, df2, test_num, channel_num):
         print("")
         additional_notes.append("Signal values aren't exactly the same")
 
-    if abs(avg_signal_difference) <= 5:  # Currently using a
-        print("Test " + str(test_num) + ": PASS - difference is less than 5%")
+    if abs(avg_signal_difference) <= 10:  # Currently using a 10% error cutoff
+        print("Test " + str(test_num) + ": PASS - difference is less than 10%")
         pass_fail = "PASS"
     else:
-        print("Test " + str(test_num) + ": FAIL - difference is greater than 5%")
+        print("Test " + str(test_num) + ": FAIL - difference is greater than 10%")
         pass_fail = "FAIL"
 
     print("")
@@ -161,8 +167,8 @@ def main():
 
     # Initializing unet characteristics
 
-    unet_model_63x = r"C:\BioLab2\Immunostained_Image_Analysis\unet\models\CP_epoch198.pth"
-    unet_model_20x = r"D:\BioLab\src_matlab_alternative\unet\models\CP_epoch65_only20x_no-aug.pth"
+    unet_model_63x = r"unet\models\CP_epoch198.pth"
+    unet_model_20x = r"unet\models\CP_epoch65_only20x_no-aug.pth"
     unet_model_scale = 1
     unet_img_size = (512, 512)
     unet_model_thrh = 0.5
@@ -171,19 +177,18 @@ def main():
     nuc_threshold = 50  # None by default
     javabridge.start_vm(class_path=bioformats.JARS)
 
-    # Initializing input and output folders
+# Initializing input and output folders
 
     # For test outcomes
+    summary_output_folder = r"C:\BioLab2\Immunostained_Image_Analysis-master\test_results\test_summary"
 
-    summary_output_folder = r"C:\BioLab2\Immunostained_Image_Analysis\test_results\tests_summary"
-
-    # For Test 1
-    bioformat_imgs_path_63x = r"C:\BioLab2\Immunostained_Image_Analysis\test_controls\test_imgs\63x"
-    analysis_out_path_t1 = r"C:\BioLab2\Immunostained_Image_Analysis\test_results\tests\test_1"
-    # For Test 2
-    analysis_out_path_t2 = r"C:\BioLab2\Immunostained_Image_Analysis\test_results\tests\test_2"
-    # For Test 3
-    analysis_out_path_t3 = r"C:\BioLab2\Immunostained_Image_Analysis\test_results\tests\test_3"
+    # For Test 1 save folder + 63x img sample locations
+    bioformat_imgs_path_63x = r"C:\BioLab2\Immunostained_Image_Analysis-master\test_sample_imgs\63x"
+    analysis_out_path_t1 = r"C:\BioLab2\Immunostained_Image_Analysis-master\test_results\tests\test_1"
+    # For Test 2 save folder location
+    analysis_out_path_t2 = r"C:\BioLab2\Immunostained_Image_Analysis-master\test_results\tests\test_2"
+    # For Test 3 save folder location
+    analysis_out_path_t3 = r"C:\BioLab2\Immunostained_Image_Analysis-master\test_results\tests\test_3"
 
     # TODO: Figure out how to make these folders reachable across devices (config?)
 
@@ -214,9 +219,6 @@ def main():
     end = time.time()
     analyzer_runtimes.append(end - start)
 
-    # print("Analysis time for Test 1: ")
-    # print(end - start)
-    # print("")
     time_temp = end
 
     # Analyzer Setup for Test 2
@@ -233,10 +235,6 @@ def main():
     end = time.time()
     analyzer_runtimes.append(end - time_temp)
 
-    # print("")
-    # print("Analysis time for Test 2: ")
-    # print(end - time_temp)
-    # print("")
     time_temp = end
 
     # Analyzer Setup for Test 3
@@ -253,10 +251,6 @@ def main():
     end = time.time()
     analyzer_runtimes.append(end - time_temp)
 
-    # print("")
-    # print("Analysis time for Test 2: ")
-    # print(end - time_temp)
-    # print("")
     time_temp = end
 
     # TEST ANALYSES
@@ -271,8 +265,8 @@ def main():
     print("----------------------------------------------------------------------------------------------------------")
     print("")
 
-    df1 = pd.read_excel(r'C:\BioLab2\Immunostained_Image_Analysis\test_controls\test_data\test_1\analysis_data\general_stats\signal_avg_xlsx.xlsx') # path to control excel file
-    df2 = pd.read_excel(r'C:\BioLab2\Immunostained_Image_Analysis\test_results\tests\test_1\analysis_data\general_stats\signal_avg_xlsx.xlsx') # path to tested excel file
+    df1 = pd.read_excel(r'C:\BioLab2\Immunostained_Image_Analysis-master\test_control_data\63x_normal.xlsx') # path to control excel file
+    df2 = pd.read_excel(r'C:\BioLab2\Immunostained_Image_Analysis-master\test_results\tests\test_1\analysis_data\general_stats\signal_avg_xlsx.xlsx') # path to tested excel file
     # TODO: include pip install openpyxl as part of required installations?
 
     pass_fail, avg_difference, additional_notes = signal_quantification_test(df1, df2, test_counter, reader1.channel_nums)
@@ -290,9 +284,9 @@ def main():
     print("")
 
     df1 = pd.read_excel(
-        r'C:\BioLab2\Immunostained_Image_Analysis\test_controls\test_data\test_2\analysis_data\general_stats\signal_avg_xlsx.xlsx')  # path to control excel file
+        r'C:\BioLab2\Immunostained_Image_Analysis-master\test_control_data\63x_normal.xlsx')  # path to control excel file
     df2 = pd.read_excel(
-        r'C:\BioLab2\Immunostained_Image_Analysis\test_results\tests\test_2\analysis_data\general_stats\signal_avg_xlsx.xlsx') # path to tested excel file
+        r'C:\BioLab2\Immunostained_Image_Analysis-master\test_results\tests\test_2\analysis_data\general_stats\signal_avg_xlsx.xlsx') # path to tested excel file
     # TODO: Adjust df1 and df2 to refer to dynamic folders - look into os.path.join or config?
 
     pass_fail, avg_difference, additional_notes = signal_quantification_test(df1, df2, test_counter, reader1.channel_nums)
@@ -310,9 +304,9 @@ def main():
     print("")
 
     df1 = pd.read_excel(
-        r'C:\BioLab2\Immunostained_Image_Analysis\test_controls\test_data\test_3\analysis_data\general_stats\signal_avg_xlsx.xlsx')  # path to control excel file
+        r'C:\BioLab2\Immunostained_Image_Analysis-master\test_control_data\63x_normal.xlsx')  # path to control excel file
     df2 = pd.read_excel(
-        r'C:\BioLab2\Immunostained_Image_Analysis\test_results\tests\test_3\analysis_data\general_stats\signal_avg_xlsx.xlsx')  # path to tested excel file
+        r'C:\BioLab2\Immunostained_Image_Analysis-master\test_results\tests\test_3\analysis_data\general_stats\signal_avg_xlsx.xlsx')  # path to tested excel file
 
     pass_fail, avg_difference, additional_notes = signal_quantification_test(df1, df2, test_counter,
                                                                              reader1.channel_nums)

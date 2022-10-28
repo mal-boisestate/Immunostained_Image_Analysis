@@ -45,7 +45,7 @@ class ImageData(object):
 
         if not isWatershed:
             if perinuclearArea is True:
-                kernel = np.ones((5, 5), np.uint8)
+                kernel = np.ones((10, 10), np.uint8)
                 img_dilation = cv2.dilate(self.nuc_mask, kernel, iterations=1)
                 new_nuc_mask = img_dilation
             else:
@@ -181,10 +181,11 @@ class ImageData(object):
         for channel in self.channels_raw_data:
             img_path = os.path.join(output_folder, base_img_name + '_' + channel.name + '_t-' + str(t) + '.png')
             img_8bit = cv2.normalize(channel.img, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8UC1)
-            cv2.drawContours(img_8bit, cnts, -1, (255, 255, 50), 3)
-            # if perinuclear_area is True:
-            #     cv2.drawContours(img_8bit, non_peri_cnts, -1, (255, 255, 50), 1)
-            # TODO: Determine which verification method is more desirable
+            cv2.drawContours(img_8bit, cnts, -1, (255, 255, 255), 1)
+
+            if perinuclear_area is True:
+                cv2.drawContours(img_8bit, non_peri_cnts, -1, (150, 0, 0), 1)
+            # TODO: Determine which perinuclear verification method is more desirable
 
             for i, cnt in enumerate(cnts):
                 org = Contour.get_cnt_center(cnt)
