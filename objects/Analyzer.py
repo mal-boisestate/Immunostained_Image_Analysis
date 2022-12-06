@@ -21,6 +21,7 @@ temp_folders = {
 
 analysis_data_folders = {
     "analysis": 'analysis_data/general_stats',
+    "perinuclear_analysis": 'analysis_data/perinuclear_data',
     "cnts_verification": 'analysis_data/nuclei_area_verification',
     "nuclei_count": 'analysis_data/nuclei_count',
     "movement_tracking": 'analysis_data/movement_tracking'
@@ -181,7 +182,7 @@ def save_stat(imgs_data, isTimelapse, analysis_out_path):
 
 def save_avg_stat(imgs_data, analysis_out_path):
     """
-        Extract and save average statistical data for images; Currently non-functional for timelapses
+        Extract and save average statistical data for images; Currently non-functional for timelapses.
         "Average" data is calculated as the total amount of stain in nuclear regions in an image divided by the number
         of nuclei, giving average stain quantity/nucleus.
 
@@ -301,6 +302,55 @@ def save_nuc_count_stat(imgs_data_t, save_graph, analysis_out_path):
 
     print(f"Stat for {file_name} is created")
 
+
+def save_perinuclear_stat(imgs_data, analysis_out_path, isTimelapse):
+    """
+    If perinuclear area is being analyzed, create a separate .xlsx file to store that information
+    """
+
+    channels_names = [channel.name for channel in imgs_data[0][0].channels_raw_data]
+    for img_data in imgs_data[0]:
+        for i, name in enumerate(channels_names):
+            if img_data.channels_raw_data[i].name != name:
+                print("Images cannot be analyzed."
+                      "Channels are not in the same order for all images")
+                sys.exit()
+
+    # 2.Create column names
+    header_row = ["Frame", "Image name", "Cell id, #",
+                      "Perinuclear area"] + ['Perinuclear signal intensity' + name for name
+                                                                              in
+                                                                              channels_names] + \
+                     ['Perinuclear signal density, ' + name for name in channels_names]
+
+    # 3. Write data
+    path = os.path.join(analysis_out_path, analysis_data_folders["analysis"], 'signal_quant_stat.csv')
+    with open(path, mode='w', newline='') as stat_file:
+        csv_writer = csv.writer(stat_file, delimiter=',')
+        csv_writer.writerow(header_row)
+        t = 0
+        for img_data_t in imgs_data:
+            for img_data in img_data_t:
+                for i, cell in enumerate(img_data.perinuclear_cells_data):
+                    csv_writer.writerow(
+                        # TODO: Adjust for perinuclear_area
+                        [t, img_data.path, str(i), str(cell.area)] +
+                        [signal.intensity for signal in cell.signals] +
+                        [signal.intensity / cell.area for signal in cell.signals])
+                if isTimelapse is True:
+                    t += 1
+                csv_writer.writerow([None, None, None, None, None, None] +
+                                        [None for signal in cell.signals])
+
+    print("csv perinuclear stat created")
+
+    # Conversion of csv file to xlsx file - removes original csv file
+
+    filepath_in = path
+    filepath_out = os.path.join(analysis_out_path, analysis_data_folders["perinuclear_analysis"], 'perinuclear_data.xlsx')
+    pd.read_csv(filepath_in, delimiter=",").to_excel(filepath_out, index=False)
+
+    os.remove(filepath_in)
 
 def save_movement_stat(features, analysis_out_path):
     """
@@ -509,6 +559,8 @@ class Analyzer(object):
 
         save_stat(imgs_data, self.isTimelapse, self.analysis_out_path)
         save_avg_stat(imgs_data, self.analysis_out_path)
+        if self.perinuclearArea is True:
+            save_perinuclear_stat(imgs_data, self.analysis_out_path, self.isTimelapse)
 
     def find_mask_based_on_thr(self, reader, t=0):
         """
