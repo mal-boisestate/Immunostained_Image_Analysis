@@ -180,15 +180,15 @@ def main():
 # Initializing input and output folders
 
     # For test outcomes
-    summary_output_folder = r"C:\BioLab2\Immunostained_Image_Analysis\test_results\test_summary"
+    summary_output_folder = r"test_results\test_summary"
 
     # For Test 1 save folder + 63x img sample locations
-    bioformat_imgs_path_63x = r"C:\BioLab2\Immunostained_Image_Analysis\test_img_63x"
-    analysis_out_path_t1 = r"C:\BioLab2\Immunostained_Image_Analysis\test_results\tests\test_1"
+    bioformat_imgs_path_63x = r"test_img_63x"
+    analysis_out_path_t1 = r"test_results\tests\test_1"
     # For Test 2 save folder location
-    analysis_out_path_t2 = r"C:\BioLab2\Immunostained_Image_Analysis\test_results\tests\test_2"
+    analysis_out_path_t2 = r"test_results\tests\test_2"
     # For Test 3 save folder location
-    analysis_out_path_t3 = r"C:\BioLab2\Immunostained_Image_Analysis\test_results\tests\test_3"
+    analysis_out_path_t3 = r"test_results\tests\test_3"
 
     # TODO: Figure out how to make these folders reachable across devices (config?)
 
@@ -265,8 +265,8 @@ def main():
     print("----------------------------------------------------------------------------------------------------------")
     print("")
 
-    df1 = pd.read_excel(r'C:\BioLab2\Immunostained_Image_Analysis\test_control_data\63x_normal.xlsx') # path to control excel file
-    df2 = pd.read_excel(r'C:\BioLab2\Immunostained_Image_Analysis\test_results\tests\test_1\analysis_data\general_stats\signal_avg_xlsx.xlsx') # path to tested excel file
+    df1 = pd.read_excel(r'test_control_data\63x_normal.xlsx') # path to control excel file
+    df2 = pd.read_excel(r'test_results\tests\test_1\analysis_data\general_stats\signal_avg_xlsx.xlsx') # path to tested excel file
     # TODO: include pip install openpyxl as part of required installations?
 
     pass_fail, avg_difference, additional_notes = signal_quantification_test(df1, df2, test_counter, reader1.channel_nums)
@@ -284,9 +284,9 @@ def main():
     print("")
 
     df1 = pd.read_excel(
-        r'C:\BioLab2\Immunostained_Image_Analysis\test_control_data\63x_normal.xlsx')  # path to control excel file
+        r'test_control_data\63x_normal.xlsx')  # path to control excel file
     df2 = pd.read_excel(
-        r'C:\BioLab2\Immunostained_Image_Analysis\test_results\tests\test_2\analysis_data\general_stats\signal_avg_xlsx.xlsx') # path to tested excel file
+        r'test_results\tests\test_2\analysis_data\general_stats\signal_avg_xlsx.xlsx') # path to tested excel file
     # TODO: Adjust df1 and df2 to refer to dynamic folders - look into os.path.join or config?
 
     pass_fail, avg_difference, additional_notes = signal_quantification_test(df1, df2, test_counter, reader1.channel_nums)
@@ -304,9 +304,9 @@ def main():
     print("")
 
     df1 = pd.read_excel(
-        r'C:\BioLab2\Immunostained_Image_Analysis\test_control_data\63x_normal.xlsx')  # path to control excel file
+        r'test_control_data\63x_normal.xlsx')  # path to control excel file
     df2 = pd.read_excel(
-        r'C:\BioLab2\Immunostained_Image_Analysis\test_results\tests\test_3\analysis_data\general_stats\signal_avg_xlsx.xlsx')  # path to tested excel file
+        r'test_results\tests\test_3\analysis_data\general_stats\signal_avg_xlsx.xlsx')  # path to tested excel file
 
     pass_fail, avg_difference, additional_notes = signal_quantification_test(df1, df2, test_counter,
                                                                              reader1.channel_nums)
