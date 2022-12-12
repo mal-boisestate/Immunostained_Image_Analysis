@@ -56,7 +56,10 @@ class ImageData(object):
                 self.perinuc_mask = img_dilation # modification for use in nuc area signal analysis
                 new_nuc_mask = img_dilation
             else:
+                original_mask = self.nuc_mask
                 new_nuc_mask = self.nuc_mask
+                # original_mask used for creating original cnt layer, new_nuc_mask used for creating larger layer
+
             need_increment = True
 
             if trackMovement is True:

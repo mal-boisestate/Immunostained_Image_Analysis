@@ -146,8 +146,7 @@ def save_stat(imgs_data, isTimelapse, analysis_out_path):
                         [signal.intensity / cell.area for signal in cell.signals])
                 if isTimelapse is True:
                     t += 1
-                csv_writer.writerow([None, None, None, None, None, None] +
-                                    [None for signal in cell.signals])
+                csv_writer.writerow([None])
 
     # #Save data for Chase
     # header_row = ["Image name", "Number of cells", "Total nucleus area"] + \
