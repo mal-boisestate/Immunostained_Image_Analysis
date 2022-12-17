@@ -227,8 +227,8 @@ class DataCollectionPage:
 
         # channel mask
         ctk.CTkLabel(master=data_root, text='Nuclear Mask', anchor='w').grid(column=0, row=4, sticky=tk.W, padx=15, pady=15)
-        mask_combobox = ctk.CTkComboBox(master=data_root, values=["DAPI", "AF350", "Option3"], variable=self.mask_channel)
-        mask_combobox['values'] = ["DAPI", "AF350", "Option3"]
+        mask_combobox = ctk.CTkComboBox(master=data_root, values=["DAPI", "AF350", "DIC"], variable=self.mask_channel)
+        mask_combobox['values'] = ["DAPI", "AF350", "DIC"]
         # prevent typing a value
         mask_combobox['state'] = 'readonly'
         mask_combobox.grid(column=1, row=4, sticky=tk.W, padx=0, pady=15)
