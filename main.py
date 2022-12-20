@@ -6,7 +6,7 @@ import bioformats
 
 
 def main():
-    bioformat_imgs_path = r"D:\BioLab\img\Chase_img\40x_stiched\Replicate 1 (9-16-22)\6xLIV"  # path to the folder that contains bio format images (czi, lif, ect) or path to the specific image
+    bioformat_imgs_path = r"D:\BioLab\img\Anamaria_img\Stiched"  # path to the folder that contains bio format images (czi, lif, ect) or path to the specific image
     # bioformat_imgs_path = r"C:\BioLab\img\testing ground"
     nuc_recognition_mode = "unet"  # "unet" or "thr"
     mask_channel_name = "DAPI"

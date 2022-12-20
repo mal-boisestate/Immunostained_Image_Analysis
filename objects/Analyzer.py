@@ -148,26 +148,6 @@ def save_stat(imgs_data, isTimelapse, analysis_out_path):
                 csv_writer.writerow([None, None, None, None, None, None] +
                                     [None for signal in cell.signals])
 
-    # #Save data for Chase
-    # header_row = ["Image name", "Number of cells", "Total nucleus area"] + \
-    #              ['Total intensity, ' + name for name in channels_names]
-    #
-    # # 3. Write data
-    # path = os.path.join(analysis_out_path, analysis_data_folders["analysis"], 'stat_for_Chase.csv')
-    # with open(path, mode='w', newline='') as stat_file:
-    #     csv_writer = csv.writer(stat_file, delimiter=',')
-    #     csv_writer.writerow(header_row)
-    #     t = 0
-    #     for img_data in imgs_data:
-    #         cells_num = img_data[0].cells_num
-    #         total_nuc_area = 0
-    #         for cell in img_data[0].cells_data:
-    #             total_nuc_area += cell.area
-    #
-    #         csv_writer.writerow([img_data[0].path, str(cells_num), str(total_nuc_area)] +
-    #                             [np.sum(channel_intecity.img) for channel_intecity in img_data[0].channels_raw_data])
-    #
-
     print("csv stat created")
 
     # Conversion of csv file to xlsx file - removes original csv file
@@ -477,6 +457,7 @@ class Analyzer(object):
                     self.nuc_area_min_pixels_num, self.mask_channel_name, t, self.perinuclearArea)
                 imgs_data_t.append(img_data)
 
+
                 # OPTIONAL debugging conditional - for plotting movement trails at every frame in a timelapse
                 if self.trackMovement is True and self.trackEachFrame is True:
                     plot_movement_trails(features, t, self.analysis_out_path)
@@ -546,7 +527,7 @@ class Analyzer(object):
             unet_model_path = self.unet_parm.unet_model_path_20x
 
         if reader.magnification == "40.0":
-            unet_model_path = self.unet_parm.unet_model_path_63x0x #we need to train model that works with 40x
+            unet_model_path = self.unet_parm.unet_model_path_63x #we need to train model that works with 40x
 
         if does_cut_img:
 

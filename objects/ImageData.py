@@ -126,7 +126,9 @@ class ImageData(object):
         overall_signal_num = []
 
         for channel in self.channels_raw_data:
-            signal_sum = np.matrix.sum(np.asmatrix(channel.img))
+
+            # signal_sum = np.matrix.sum(np.asmatrix(channel.img.astype(np.int64)))
+            signal_sum = np.sum(channel.img.astype(np.int64))
             signal = Signal(channel.name, signal_sum)
             overall_signal.append(signal)
 

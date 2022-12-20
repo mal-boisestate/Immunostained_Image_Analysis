@@ -18,7 +18,9 @@ def run_through_gui(analysis_type, bioformat_imgs_path,
 
     track_movement = True if analysis_type == 'tracing' else False
 
-    unet_model_path_63x = r"unet\models\CP_epoch198.pth"
+    # unet_model_path_63x = r"unet\models\CP_epoch198.pth"
+    unet_model_path_63x = r"unet\models\CP_epoch72.pth"
+
     # unet_model_path_20x = r"unet\models\CP_epoch65_only20x_no-aug.pth" #old
     unet_model_path_20x = r"unet\models\CP_epoch172.pth" #new from Omar imgs
 

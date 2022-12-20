@@ -30,7 +30,7 @@ def train_net(net,
               lr=0.001,
               val_percent=0.1,
               save_cp=True,
-              img_scale=1):
+              img_scale=0.5):
     # transform_train = DataAugmentation.get_data_augmentation_transforms()
     transform_train = None
 
@@ -60,7 +60,7 @@ def train_net(net,
     if net.n_classes > 1:
         criterion = nn.CrossEntropyLoss()
     else:
-        pos_weight = torch.tensor(20).to(device=device)  #pos_weight is weight corf white of pixels compare to black
+        pos_weight = torch.tensor(3).to(device=device)  #pos_weight is weight corf white of pixels compare to black
         criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 
     for epoch in range(epochs):
