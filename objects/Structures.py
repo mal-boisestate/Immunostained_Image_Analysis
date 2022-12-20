@@ -32,6 +32,7 @@ class NucData(object):
         self.center = center
         self.perimeter = perimeter
         self.signals = None
+        self.perinuclear_signals = None # added for separate inclusion of perinuclear analysis
 
     def update_signals(self, signals):
         self.signals = signals

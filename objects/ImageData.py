@@ -25,9 +25,10 @@ class ImageData(object):
         self.path = path
         self.channels_raw_data = channels_raw_data
         self.nuc_mask = run_erosion_dialation(nuc_mask) #helps to remove
-        self.cnts, self.features = self._get_nuc_cnts(isWatershed, nuc_area_min_pixels_num, time_point, trackMovement, features, perinuclearArea)
-        self.original_cnts, _ = self._get_nuc_cnts(isWatershed, nuc_area_min_pixels_num, time_point, trackMovement, features, False) # always finds cnts without perinuclear area
-        self.cells_data, self.cells_num = self._analyse_signal_in_nuc_area(nuc_area_min_pixels_num)
+        self.perinuc_mask = self.nuc_mask # make be modified later in program if perinuclear area is wanted
+        self.cnts, self.perinuclear_cnts, self.features = self._get_nuc_cnts(isWatershed, nuc_area_min_pixels_num, time_point, trackMovement, features, perinuclearArea)
+        self.original_cnts, _, _ = self._get_nuc_cnts(isWatershed, nuc_area_min_pixels_num, time_point, trackMovement, features, False) # always finds cnts without perinuclear area
+        self.cells_data, self.cells_num, self.perinuclear_cells_data = self._analyse_signal_in_nuc_area(nuc_area_min_pixels_num, perinuclearArea)
         self.time_point = time_point
         # self.features = self._get_features() TODO: We can add other characteristics such as intensity  and area and organize it im one function
         self.signals_list = [] # list that will contain signal intensities for each time point
@@ -41,23 +42,38 @@ class ImageData(object):
         # features is the DataFrame object to which cell location data will be added
         # self.remove_edge_cells() #  Remove cells on the edge of image from the nucleus mask
         full_cnts = []
+        perinuclear_cnts = []
+
+        original_mask = None
+
         cell_num = 1
 
-        if not isWatershed:
+        if not isWatershed: # no watershedding (no post-unet/thresholding separation of touching cells)
             if perinuclearArea is True:
-                kernel = np.ones((5, 5), np.uint8)
+                kernel = np.ones((10, 10), np.uint8)
                 img_dilation = cv2.dilate(self.nuc_mask, kernel, iterations=1)
+                original_mask = self.nuc_mask
+                self.perinuc_mask = img_dilation # modification for use in nuc area signal analysis
                 new_nuc_mask = img_dilation
             else:
+                original_mask = self.nuc_mask
                 new_nuc_mask = self.nuc_mask
+                # original_mask used for creating original cnt layer, new_nuc_mask used for creating larger layer
+
             need_increment = True
+
             if trackMovement is True:
                 features = self.find_nuc_locations(new_nuc_mask, features, need_increment, t, cell_num, trackMovement)
-            full_cnts = Contour.get_mask_cnts(new_nuc_mask) # contours drawn from provided nuc_mask (a binary 1/255 arr)
 
+            full_cnts = Contour.get_mask_cnts(original_mask) # contours drawn from provided nuc_mask (a binary 1/255 arr)
+
+            if perinuclearArea is True:
+                perinuclear_cnts = Contour.get_mask_cnts(new_nuc_mask) # obtain perinuclear cnts if wanted
+
+        # TODO: Make updated perinuclear method work with watershedding
         else: # Applying watershed algorithm on the mask
             if perinuclearArea is True:
-                kernel = np.ones((5, 5), np.uint8)
+                kernel = np.ones((10, 10), np.uint8)
                 img_dilation = cv2.dilate(self.nuc_mask, kernel, iterations=1)
                 self.nuc_mask = img_dilation
 
@@ -91,32 +107,61 @@ class ImageData(object):
                 # "extend" adds a specified element to the end of a given list
                 # Returns a list of contours
 
-        return full_cnts, features
+        return full_cnts, perinuclear_cnts, features
 
 
-    def _analyse_signal_in_nuc_area(self, nuc_area_min_pixels_num):
+    def _analyse_signal_in_nuc_area(self, nuc_area_min_pixels_num, perinuclearArea):
 
         nuclei_data = []
+        perinuclei_data = []
+        perinuclear_counter = 0
 
         for cnt in self.cnts:
+
+            save_signal_sum = []
+
             mask = Contour.draw_cnt(cnt, self.nuc_mask.shape)
             center = Contour.get_cnt_center(cnt)
             area = cv2.contourArea(cnt)
             perimeter = cv2.arcLength(cnt, True)
+
             if area < nuc_area_min_pixels_num:  # if it is noise not a nuc
                 continue
+
             nucleus_data = NucData(center, area, perimeter)
             signals = []
-            for channel in self.channels_raw_data:
+            for channel in self.channels_raw_data: # iterates through each existing channel
                 cut_out_signal_img = np.multiply(mask, channel.img)
                 signal_sum = np.matrix.sum(np.asmatrix(cut_out_signal_img))
+                save_signal_sum.append(signal_sum)
                 signal = Signal(channel.name, signal_sum)
                 signals.append(signal)
+
+            if perinuclearArea is True:
+                perinuclear_mask = Contour.draw_cnt(self.perinuclear_cnts[perinuclear_counter], self.perinuc_mask.shape)
+                perinuclear_area = cv2.contourArea(self.perinuclear_cnts[perinuclear_counter]) - area
+                perinuclear_data = NucData(center, perinuclear_area, perimeter) # perimeter is inaccurate and not used
+
+                perinuclear_counter += 1
+
+                perinuclear_signals = []
+                perinuc_channel_counter = 0
+                for channel2 in self.channels_raw_data:
+                    perinuc_cut_out_signal_img = np.multiply(perinuclear_mask, channel2.img)
+                    perinuclear_signal_sum = np.matrix.sum(np.asmatrix(perinuc_cut_out_signal_img))
+                    perinuclear_signal_true = perinuclear_signal_sum - save_signal_sum[perinuc_channel_counter]
+                    perinuclear_signal = Signal(channel2.name, perinuclear_signal_true)
+                    perinuclear_signals.append(perinuclear_signal)
+
+                    perinuc_channel_counter += 1
+
+                perinuclear_data.update_signals(perinuclear_signals)
+                perinuclei_data.append(perinuclear_data)
 
             nucleus_data.update_signals(signals)
             nuclei_data.append(nucleus_data)
 
-        return nuclei_data, len(nuclei_data)
+        return nuclei_data, len(nuclei_data), perinuclei_data # nuclei_data and perinuclei_data should have the same length
 
     def _analyze_signal_in_entire_frame(self):
 
@@ -137,7 +182,7 @@ class ImageData(object):
 
         return overall_signal_num
 
-    # TODO
+    # TODO - Confirm correct functionality?
     def _analyze_signal_outside_nuclei(self, overall_signals, cells_data):
 
         # Calculates the difference between total image signal and signal in nuclear regions
@@ -177,16 +222,17 @@ class ImageData(object):
 
         base_img_name = os.path.splitext(os.path.basename(self.path))[0]
         cnts = [cnt for cnt in self.cnts if cv2.contourArea(cnt) > nuc_area_min_pixels_num] # removes noise
-        non_peri_cnts = [cnt for cnt in self.original_cnts if cv2.contourArea(cnt) > nuc_area_min_pixels_num]
+        perinuclear_cnts = [cnt for cnt in self.perinuclear_cnts if cv2.contourArea(cnt) > nuc_area_min_pixels_num]
         merged_img = []
 
         for channel in self.channels_raw_data:
             img_path = os.path.join(output_folder, base_img_name + '_' + channel.name + '_t-' + str(t) + '.png')
             img_8bit = cv2.normalize(channel.img, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8UC1)
-            cv2.drawContours(img_8bit, cnts, -1, (255, 255, 50), 3)
-            # if perinuclear_area is True:
-            #     cv2.drawContours(img_8bit, non_peri_cnts, -1, (255, 255, 50), 1)
-            # TODO: Determine which verification method is more desirable
+            cv2.drawContours(img_8bit, cnts, -1, (255, 255, 255), 1)
+
+            if perinuclear_area is True:
+                cv2.drawContours(img_8bit, perinuclear_cnts, -1, (150, 0, 0), 1)
+            # TODO: Determine which perinuclear verification method is more desirable
 
             for i, cnt in enumerate(cnts):
                 org = Contour.get_cnt_center(cnt)
@@ -209,8 +255,8 @@ class ImageData(object):
                 img_path = os.path.join(output_folder, base_img_name + '_non_perinuclear_' + channel.name + '_t-' + str(t) + '.png')
                 img_8bit = cv2.normalize(channel.img, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX,
                                          dtype=cv2.CV_8UC1)
-                cv2.drawContours(img_8bit, non_peri_cnts, -1, (255, 255, 50), 3)
-                for i, cnt in enumerate(non_peri_cnts):
+                cv2.drawContours(img_8bit, perinuclear_cnts, -1, (255, 255, 50), 3)
+                for i, cnt in enumerate(perinuclear_cnts):
                     org = Contour.get_cnt_center(cnt)
                     cv2.putText(img_8bit, str(i), org, fontFace=cv2.FONT_HERSHEY_PLAIN, fontScale=3,
                                 color=(255, 255, 0), thickness=3)
