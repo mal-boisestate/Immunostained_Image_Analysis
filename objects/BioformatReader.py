@@ -40,7 +40,7 @@ class BioformatReader(object):
     def find_channel(self, channel_name):
         channel_num = None
         for i in range(self.channel_nums):
-            if self.metadata_obj.image().Pixels.Channel(i).get_Name() == channel_name:
+            if channel_name in self.metadata_obj.image().Pixels.Channel(i).get_Name():
                 channel_num = i
 
         return channel_num

@@ -1,53 +1,22 @@
-# Currently unused
-import numpy as np
-import pandas as pd
-import trackpy as tp
-import os
-from scipy import ndimage
-from skimage import morphology, util, filters
+from typing import Callable
 
-# Used
-from objects.BioformatReader import BioformatReader
-import bioformats
-import pims
-import cv2.cv2 as cv2
-import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
-import skimage
+def filter_by(items, criterion):
+    assert callable(criterion)
+    return [item for item,next_item in zip(items, items[1:]) if criterion(item, next_item)]
 
-path = 'C:\\BioLab\\img\\Overnight DAPI'
-test_reader = BioformatReader(path, 0, 'DAPI')
-print("hello world")
-# img_example = pims.open(path, )
-# size = img_example.sizes
+# def start_with_a(word):
+#     return word[0] == 'a'
 
-# # plt.imshow(img_example[0])
-# plt.imshow(cv2.cvtColor(img_example[0], cv2.COLOR_BGR2RGB))
-#
-# # Label elements on the picture
-# black = 0
-# label_image, number_of_labels = skimage.measure.label(img_example[0], background=black, return_num=True)
-# print("Found %d features"%(number_of_labels))
-# fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(12, 12))
-#
-# ax.imshow(img_example[0])
-#
-# print("ax imshow?")
-#
-# for region in skimage.measure.regionprops(label_image, intensity_image=img_example[0]):
-#     # Everywhere, skip small areas
-#     if region.area < 200:
-#         continue
-#     # Only white areas
-#     if region.mean_intensity < 255:
-#         continue
-#
-#     # Draw rectangle which survived to the criterions
-#     minr, minc, maxr, maxc = region.bbox
-#     rect = mpatches.Rectangle((minc, minr), maxc - minc, maxr - minr,
-#                               fill=False, edgecolor='red', linewidth=1)
-#
-#     ax.add_patch(rect)
-#
-# ax.imshow(img_example[0])
+
+if __name__ == '__main__':
+    start_with_a = lambda x, y: x[0] == 'a' and y[1] == 'p'
+    fruits = ['apple', 'apricot', 'pear', 'plum', 'orange', 'banana', 'watermelon', 'lemon']
+    fruits_a = filter_by(fruits, start_with_a)
+    # fruits_b = filter_by(fruits, lambda x: 't' in x)
+    print(fruits_a)
+    # print(fruits_b)
+
+
+
+
 

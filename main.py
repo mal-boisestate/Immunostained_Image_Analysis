@@ -6,9 +6,8 @@ import bioformats
 
 
 def main():
-    bioformat_imgs_path = r"D:\BioLab\img\Anamaria_img\Stiched"  # path to the folder that contains bio format images (czi, lif, ect) or path to the specific image
-    # bioformat_imgs_path = r"C:\BioLab\img\testing ground"
-    nuc_recognition_mode = "unet"  # "unet" or "thr"
+    bioformat_imgs_path = r"D:\BioLab\img\2023.02.03_Starvation_exp\Plus_Adipo_2per_Overnight"  # path to the folder that contains bio format images (czi, lif, ect) or path to the specific image
+    nuc_recognition_mode = "thr"  # "unet" or "thr"
     mask_channel_name = "DAPI"
     isWatershed = False # applies watershed to separate touching cells
     trackMovement = False # toggles cell movement tracking functionality
@@ -21,8 +20,8 @@ def main():
 
     unet_model_63x = r"unet\models\CP_epoch198.pth" # path to the trained Unet model if the user chooses nuc_recognition_mode = unet if not can be None
     # unet_model_63x = r"C:\BioLab2\Immunostained_Image_Analysis\unet\models\CP_epoch198.pth"
-    unet_model_20x = r"unet\models\CP_epoch65_only20x_no-aug.pth"
-    # unet_model_20x = r"unet\models\CP_epoch169.pth"
+    # unet_model_20x = r"unet\models\CP_epoch65_only20x_no-aug.pth"
+    unet_model_20x = r"unet\models\CP_epoch169.pth"
 
     # Unet training process characteristics:
     unet_model_scale = 1
@@ -30,7 +29,7 @@ def main():
     unet_model_thrh = 0.5
     nuc_area_min_pixels_num = 200 # Minimum pixel size of contiguous ROIs to be labeled as "cells"
     unet_parm = UnetParam(unet_model_63x, unet_model_20x, unet_model_scale, unet_model_thrh, unet_img_size)
-    nuc_threshold = 50 # None by default
+    nuc_threshold = 10 # None by default
     javabridge.start_vm(class_path=bioformats.JARS)
 
     start = time.time()

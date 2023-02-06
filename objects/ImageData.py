@@ -40,7 +40,7 @@ class ImageData(object):
 
     def _get_nuc_cnts(self, isWatershed, nuc_area_min_pixels_num, t=0, trackMovement=False, features=None, perinuclearArea=False): # add last three to ImageData object!
         # features is the DataFrame object to which cell location data will be added
-        # self.remove_edge_cells() #  Remove cells on the edge of image from the nucleus mask
+        self.remove_edge_cells() #  Remove cells on the edge of image from the nucleus mask
         full_cnts = []
         perinuclear_cnts = []
 
@@ -239,7 +239,7 @@ class ImageData(object):
                 cv2.putText(img_8bit, str(i), org, fontFace=cv2.FONT_HERSHEY_PLAIN, fontScale=3, color=(255, 255, 0), thickness=3)
                 # Cell numbering?
 
-            if channel.name == mask_img_name:
+            if mask_img_name in channel.name:
                 cv2.imwrite(img_path, img_8bit)
             merged_img.append(img_8bit)
 
@@ -296,11 +296,20 @@ class ImageData(object):
         cnts = Contour.get_mask_cnts(self.nuc_mask)
         max_x, max_y = self.nuc_mask.shape
 
-        if max_x != max_y:
-            sys.exit("The current version of the program can analyze only square shape images."
-                        "Please modify remove_edge_cells to overcome this issue.")
+        # if max_x != max_y:
+        #     sys.exit("The current version of the program can analyze only square shape images."
+        #                 "Please modify remove_edge_cells to overcome this issue.")
 
-        new_cnts = [cnt for cnt in cnts if cnt.max() < max_x - 2 and cnt.min() > 1]
+        # Countours should not touch the edges of the image
+        new_cnts = []
+        for cnt in cnts:
+            cnt_max_x = cnt[:, 0, 0].max()
+            cnt_max_y = cnt[:, 0, 1].max()
+            cnt_min_x = cnt[:, 0, 0].min()
+            cnt_min_y = cnt[:, 0, 1].min()
+            if (cnt_max_x < max_x - 2) and (cnt_max_y < max_y - 2) and (cnt_min_x > 1) and (cnt_min_y > 1):
+                new_cnts.append(cnt)
+
         nuc_mask_no_edge_cells = np.zeros(self.nuc_mask.shape, dtype="uint8")
         cv2.drawContours(nuc_mask_no_edge_cells, new_cnts, -1, color=(255, 255, 255), thickness=cv2.FILLED)
         self.nuc_mask = nuc_mask_no_edge_cells

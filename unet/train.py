@@ -60,7 +60,7 @@ def train_net(net,
     if net.n_classes > 1:
         criterion = nn.CrossEntropyLoss()
     else:
-        pos_weight = torch.tensor(3).to(device=device)  #pos_weight is weight corf white of pixels compare to black
+        pos_weight = torch.tensor(1).to(device=device)  #pos_weight is weight corf white of pixels compare to black
         criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 
     for epoch in range(epochs):
@@ -147,7 +147,7 @@ def get_args():
     parser.add_argument('-s', '--scale', dest='scale', type=float, default=1.0,
                         help='Downscaling factor of the images')
     parser.add_argument(
-        '-v', '--validation', dest='val', type=float, default=0.0,
+        '-v', '--validation', dest='val', type=float, default=20,
                         help='Percent of the data that is used as validation (0-100)')
 
     return parser.parse_args()
@@ -156,7 +156,6 @@ def get_args():
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
     args = get_args()
-    # device = torch.device('cpu')
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     logging.info(f'Using device {device}')
 
