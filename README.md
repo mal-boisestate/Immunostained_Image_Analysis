@@ -35,6 +35,21 @@ experimental batch). Those defined ROIs then become the areas from which various
 data is taken - namely stain pixel intensity and distribution - and quantified
 numerically in the form of an Excel spreadsheet.
 
+## Feature Preview
+
+Segmentation of cell nuclear or whole cell contours using DAPI, DIC, etc.:\
+![22-11-16 DIC DAPI overnight 1_ LED-Shift-01_DAPI_t-1](https://github.com/mal-boisestate/Immunostained_Image_Analysis/assets/107217268/5b1949ba-6f4a-42a2-abdb-cf2f6f9c1b3c)
+
+Automatic data quantification in Excel:\
+![signal_quant_stat example](https://github.com/mal-boisestate/Immunostained_Image_Analysis/assets/107217268/addefea3-7068-4954-8a08-5df026a26a40)
+
+Cell tracking over time in a timelapse:\
+![image](https://github.com/mal-boisestate/Immunostained_Image_Analysis/assets/107217268/5c75abb5-1670-4f0a-a6c5-fe197f2a6467)
+
+GUI for easy user access:\
+![image](https://github.com/mal-boisestate/Immunostained_Image_Analysis/assets/107217268/4b38882e-390d-4690-ae43-69cac9ab7d0c)
+
+And more!
 
 ## How to Use
 Please refer to the pdf labeled "Documentation" in this project for detailed instructions regarding program features, installation, and usage.
