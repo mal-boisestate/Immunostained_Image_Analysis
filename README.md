@@ -41,6 +41,4 @@ Please refer to the pdf labeled "Documentation" in this project for detailed ins
 
 
 ## The Team
--Benjamin Morenas
--Nina Nikitina
--Gunes Uzer
+Benjamin Morenas, Nina Nikitina, and Gunes Uzer
